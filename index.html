@@ -127,6 +127,24 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .service-panel .sp-desc{color:var(--muted);font-size:13px;margin-bottom:16px}
 .yo-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:220px;overflow-y:auto}
 .typo-result{margin-top:14px}
+
+/* ИСПРАВЛЕНИЕ ПОЛЕЙ ВВОДА В СЕРВИСАХ */
+.field{margin-bottom:12px}
+.field textarea { 
+  width: 100%; 
+  background: var(--input-bg); 
+  border: 1px solid var(--border-strong); 
+  border-radius: 9px; 
+  padding: 12px 14px; 
+  color: var(--text); 
+  font-family: var(--font-mono); 
+  font-size: 13.5px; 
+  outline: none; 
+  resize: vertical; 
+  transition: border-color .2s;
+}
+.field textarea:focus { border-color: var(--accent); }
+.field textarea::placeholder { color: var(--muted); opacity: .5; }
 </style>
 </head>
 <body data-theme="dark">
@@ -247,11 +265,16 @@ function startTimer(container, label = 'Проверяю…') {
   return { stop: () => { clearInterval(iv); return ((performance.now() - t0) / 1000); } };
 }
 
+// ИСПРАВЛЕНО: Яндекс Спеллер теперь шлет POST, чтобы не терять спецсимволы
 async function yandexSpell(text) {
   const url = 'https://speller.yandex.net/services/spellservice.json/checkText';
-  const params = new URLSearchParams({ text, lang: 'ru', options: '4' });
+  const body = new URLSearchParams({ text, lang: 'ru', options: '4' });
   try {
-    const r = await fetch(`${url}?${params}`);
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
   } catch (e) {
@@ -563,7 +586,12 @@ function openService(id){
         return true;
       });
 
+      // Если ни локальный, ни внешние не справились
       if (uniq.length === 0) {
+        if (!yandex && !lt) {
+           resultEl.innerHTML = `<div class="ex bad" style="margin-top:12px">Внешние сервисы недоступны (возможно, блокировка браузера или лимит). Локальный словарь ничего не нашел.</div>`;
+           return;
+        }
         resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ни опечаток, ни ошибок не найдено</div>`;
         return;
       }
