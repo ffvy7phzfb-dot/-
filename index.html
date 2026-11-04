@@ -337,7 +337,9 @@ const TESTS = [
 
 const SERVICES = [
   { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Общий для всех.", badge:"словарь" },
-  { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"стиль" }
+  { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"стиль" },
+  { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + Яндекс Спеллер + LanguageTool.", badge:"орфография" },
+  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика через LanguageTool.", badge:"грамматика" }
 ];
 
 let USER = null;
@@ -435,6 +437,39 @@ async function loadMessages(chatId) {
   const { data } = await db.from('messages').select('*').eq('chat_id', chatId).order('created_at', { ascending: true });
   MSGS[chatId] = data || [];
   renderChats();
+}
+
+/* ============ ВНЕШНИЕ СЕРВИСЫ ПРОВЕРКИ ============ */
+// Яндекс Спеллер — орфография и опечатки
+async function yandexSpell(text) {
+  const url = 'https://speller.yandex.net/services/spellservice.json/checkText';
+  const params = new URLSearchParams({ text, lang: 'ru', options: '4' });
+  try {
+    const r = await fetch(`${url}?${params}`);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    console.error('Yandex Speller:', e);
+    return null;
+  }
+}
+
+// LanguageTool — грамматика, пунктуация, стиль
+async function languageTool(text) {
+  const url = 'https://api.languagetool.org/v2/check';
+  const body = new URLSearchParams({ text, language: 'ru-RU' });
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) {
+    console.error('LanguageTool:', e);
+    return null;
+  }
 }
 
 /* ============ ВХОД ============ */
@@ -699,6 +734,217 @@ function openService(id){
       const t = document.getElementById('canceloInput').value; const found=[];
       CANCELO.forEach(([w,r])=>{ const re=new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'); const m=t.match(re); if(m) found.push({w:m[0],r}); });
       document.getElementById('canceloResult').innerHTML = found.length ? found.map(f=>`<div class="typo-line">${esc(f.w)} → <b>${esc(f.r)}</b></div>`).join('') : `<div class="typo-line" style="border-color:var(--ok);background:rgba(124,255,178,0.06)">Канцелярита нет</div>`;
+    };
+  }
+
+  if(id==='typos') {
+    panel.innerHTML = `
+      <h3>Опечатки</h3>
+      <div class="sp-desc">Сначала локальный словарь, затем Яндекс Спеллер и LanguageTool (оба — фоном, параллельно).</div>
+      <div class="field"><textarea id="typoText" placeholder="Вставьте текст…" style="min-height:140px"></textarea></div>
+      <button class="btn primary" id="typoRun">Проверить</button>
+      <div class="typo-result" id="typoResult"></div>
+      <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+        <div class="sp-desc" style="margin-bottom:8px">Статус внешних сервисов:</div>
+        <div class="yo-list" id="typoStatus">
+          <span style="color:var(--muted);font-size:13px">Ещё не запускались</span>
+        </div>
+      </div>
+    `;
+
+    // Локальный словарь опечаток (свой, как LOCAL_YO у ёфикатора)
+    const LOCAL_TYPOS = {
+      "агенство": "агентство", "аппеляция": "апелляция", "безценный": "бесценный",
+      "будующий": "будущий", "втечение": "в течение", "галлерея": "галерея",
+      "дезенфекция": "дезинфекция", "занет": "занят", "извените": "извините",
+      "компромисс": "компромисс", "координальный": "кардинальный",
+      "ложить": "класть", "паралельный": "параллельный",
+      "переспектива": "перспектива", "прийдется": "придётся",
+      "черезчур": "чересчур", "эфект": "эффект"
+    };
+
+    let statusEl = document.getElementById('typoStatus');
+    let yandexOk = false, ltOk = false;
+
+    // Проверяем доступность сервисов (тихий пинг)
+    (async () => {
+      const [y, l] = await Promise.all([
+        yandexSpell('проверка'),
+        languageTool('проверка')
+      ]);
+      yandexOk = Array.isArray(y);
+      ltOk = !!(l && Array.isArray(l.matches));
+      statusEl.innerHTML = `
+        <span class="yo-chip"><span class="yo-ok">${yandexOk ? '✓' : '✕'}</span> Яндекс Спеллер</span>
+        <span class="yo-chip"><span class="yo-ok">${ltOk ? '✓' : '✕'}</span> LanguageTool</span>
+      `;
+    })();
+
+    document.getElementById('typoRun').onclick = async () => {
+      const t = document.getElementById('typoText').value;
+      const resultEl = document.getElementById('typoResult');
+      if (!t.trim()) { resultEl.innerHTML = ''; return; }
+
+      resultEl.innerHTML = `<div class="empty">Проверяю… (Яндекс + LanguageTool параллельно)</div>`;
+
+      // 1. Локальный словарь
+      const localIssues = [];
+      const localRe = /[а-яё]+/gi;
+      let m;
+      while ((m = localRe.exec(t)) !== null) {
+        const lower = m[0].toLowerCase();
+        if (LOCAL_TYPOS[lower]) {
+          localIssues.push({ word: m[0], replacement: LOCAL_TYPOS[lower], pos: m.index });
+        }
+      }
+
+      // 2. Внешние сервисы параллельно
+      const [yandex, lt] = await Promise.all([
+        yandexSpell(t),
+        languageTool(t)
+      ]);
+
+      // Собираем единый список
+      const all = [];
+
+      // Локальные
+      localIssues.forEach(i => all.push({
+        source: 'Словарь', type: 'опечатка',
+        word: i.word, repl: i.replacement,
+        ctxStart: Math.max(0, i.pos - 25),
+        ctxEnd: Math.min(t.length, i.pos + i.word.length + 25)
+      }));
+
+      // Яндекс
+      if (Array.isArray(yandex)) {
+        yandex.forEach(e => {
+          const variants = (e.s && e.s.length) ? e.s.join(', ') : '—';
+          all.push({
+            source: 'Яндекс', type: 'опечатка',
+            word: e.word, repl: variants,
+            ctxStart: Math.max(0, e.pos - 25),
+            ctxEnd: Math.min(t.length, e.pos + e.word.length + 25)
+          });
+        });
+      }
+
+      // LanguageTool
+      if (lt && Array.isArray(lt.matches)) {
+        lt.matches.forEach(m => {
+          const ctx = m.context || {};
+          const word = (ctx.text || '').slice(ctx.offset, ctx.offset + ctx.length);
+          const repl = (m.replacements || []).slice(0, 3).map(r => r.value).join(' / ') || '—';
+          const absStart = ctx.offset || 0;
+          all.push({
+            source: 'LanguageTool', type: m.rule?.issueType || 'грамматика',
+            word: word || '…', repl,
+            ctxStart: Math.max(0, absStart - 25),
+            ctxEnd: Math.min(t.length, absStart + (ctx.length || 0) + 25)
+          });
+        });
+      }
+
+      // Дубликаты по (word+repl) убираем
+      const seen = new Set();
+      const uniq = all.filter(i => {
+        const key = (i.word || '').toLowerCase() + '|' + (i.repl || '').toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      if (uniq.length === 0) {
+        resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ни опечаток, ни грамматических ошибок не найдено</div>`;
+        return;
+      }
+
+      let html = `<div class="res-summary err" style="margin-top:12px">✕ Замечаний: ${uniq.length}</div>`;
+      uniq.forEach(i => {
+        const before = t.slice(i.ctxStart, t.indexOf(i.word, i.ctxStart) >= 0 ? t.indexOf(i.word, i.ctxStart) : i.ctxStart);
+        const bad = i.word;
+        const afterStart = (before.length + i.ctxStart) + bad.length;
+        const after = t.slice(afterStart, i.ctxEnd);
+        const border = i.source === 'LanguageTool' ? 'var(--accent)' : 'var(--error)';
+        html += `
+          <div class="issue" style="cursor:default;border-left-color:${border}">
+            <span class="i-rule" style="color:${border}">${esc(i.source)} · ${esc(i.type)}</span>
+            <span class="i-detail">
+              <b style="color:var(--error)">${esc(bad)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
+              <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">
+                ${i.ctxStart>0?'…':''}${esc(before)}<u style="color:${border}">${esc(bad)}</u>${esc(after)}${i.ctxEnd<t.length?'…':''}
+              </div>
+            </span>
+          </div>`;
+      });
+      resultEl.innerHTML = html;
+    };
+  }
+
+  if(id==='grammar') {
+    panel.innerHTML = `
+      <h3>Грамматика и пунктуация</h3>
+      <div class="sp-desc">Проверка через LanguageTool (бесплатный API, лимит 20 запросов/мин, до 20 000 символов).</div>
+      <div class="field"><textarea id="grammarText" placeholder="Вставьте текст…" style="min-height:140px"></textarea></div>
+      <button class="btn primary" id="grammarRun">Проверить</button>
+      <div class="typo-result" id="grammarResult"></div>
+    `;
+
+    document.getElementById('grammarRun').onclick = async () => {
+      const t = document.getElementById('grammarText').value;
+      const resultEl = document.getElementById('grammarResult');
+      if (!t.trim()) { resultEl.innerHTML = ''; return; }
+
+      resultEl.innerHTML = `<div class="empty">Проверяю… (может занять пару секунд)</div>`;
+      const data = await languageTool(t);
+
+      if (!data || data.error) {
+        resultEl.innerHTML = `<div class="ex bad">Сервис недоступен. Попробуйте позже.</div>`;
+        return;
+      }
+
+      const matches = data.matches || [];
+      if (matches.length === 0) {
+        resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ошибок не найдено</div>`;
+        return;
+      }
+
+      let html = `<div class="res-summary err" style="margin-top:12px">✕ Найдено замечаний: ${matches.length}</div>`;
+
+      matches.forEach((m) => {
+        const category = m.rule?.category?.name || m.rule?.issueType || 'Замечание';
+        const message = m.message || '';
+        const context = m.context?.text || '';
+        const offset = m.context?.offset || 0;
+        const length = m.context?.length || 0;
+
+        const before = context.slice(0, offset);
+        const bad = context.slice(offset, offset + length);
+        const after = context.slice(offset + length);
+
+        const replacements = (m.replacements || []).slice(0, 5).map(r => r.value);
+        const replText = replacements.length ? replacements.join(' / ') : '—';
+
+        const issueType = (m.rule?.issueType || '').toLowerCase();
+        let borderColor = 'var(--warn)';
+        if (issueType === 'misspelling') borderColor = 'var(--error)';
+        else if (issueType === 'style' || issueType === 'locale-violation') borderColor = 'var(--accent)';
+
+        html += `
+          <div class="issue" style="cursor:default;border-left-color:${borderColor}">
+            <span class="i-rule" style="color:${borderColor}">${esc(category)}</span>
+            <span class="i-detail">
+              ${esc(message)}
+              <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">
+                ${esc(before)}<u style="color:${borderColor}">${esc(bad)}</u>${esc(after)}
+              </div>
+              <div style="margin-top:4px;font-size:12px">
+                Замена: <b style="color:var(--ok)">${esc(replText)}</b>
+              </div>
+            </span>
+          </div>`;
+      });
+
+      resultEl.innerHTML = html;
     };
   }
 }
