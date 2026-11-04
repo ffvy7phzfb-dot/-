@@ -50,6 +50,7 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
 .btn{font-family:var(--font-ui);font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);transition:all .2s}
 .btn:hover{background:var(--surface-hover);border-color:var(--accent)}
 .btn.primary{background:linear-gradient(135deg,rgba(94,234,212,0.18),rgba(124,255,178,0.12));border-color:rgba(94,234,212,0.4);color:var(--accent2)}
+.btn.small{padding:4px 8px;font-size:11px;}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px}
 .footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 0 10px;font-family:var(--font-mono)}
 .footer .caret{display:inline-block;width:3px;height:12px;background:var(--accent);vertical-align:middle;animation:blink 1.1s steps(1) infinite}
@@ -136,7 +137,7 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   min-height: 200px;
   max-height: 400px;
   overflow-y: auto;
-  background: var(--input-bg) !important; /* Принудительно темный */
+  background: var(--input-bg) !important;
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   padding: 16px;
@@ -149,11 +150,11 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   word-wrap: break-word;
   transition: border-color .2s;
   margin-bottom: 16px;
-  -webkit-user-modify: read-write-plaintext-only; /* Отключает вставку форматирования из Word */
+  -webkit-user-modify: read-write-plaintext-only;
 }
 .editor-box:focus {
   border-color: var(--accent);
-  background: var(--input-bg) !important; /* Убирает белый фон при клике */
+  background: var(--input-bg) !important;
   color: var(--text) !important;
 }
 .editor-box:empty:before {
@@ -163,12 +164,24 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   pointer-events: none;
   display: block;
 }
-/* Стили для кнопок */
-.action-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-/* Подсветки */
-.hl-yo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
-.hl-typo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
+.action-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+
+/* Подсветки и кнопки в тексте */
+.hl-yo { background: rgba(124, 255, 178, 0.15); color: var(--ok); border-bottom: 2px solid var(--ok); border-radius: 3px; font-weight: bold; }
+.hl-typo { background: rgba(255, 92, 138, 0.15); border-bottom: 2px solid var(--error); border-radius: 3px; padding: 0 4px; position: relative; display: inline-flex; align-items: center; }
+.hl-grammar { background: rgba(94, 234, 212, 0.15); border-bottom: 2px solid var(--accent); border-radius: 3px; padding: 0 4px; position: relative; display: inline-flex; align-items: center; }
 .hl-space { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-bottom: 2px solid var(--warn); border-radius: 3px; }
+
+.inline-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; margin-left: 4px; border-radius: 4px;
+  font-size: 11px; font-weight: bold; cursor: pointer; border: none; outline: none;
+  transition: background 0.2s;
+}
+.btn-accept { background: rgba(124, 255, 178, 0.2); color: var(--ok); }
+.btn-accept:hover { background: rgba(124, 255, 178, 0.4); }
+.btn-reject { background: rgba(255, 92, 138, 0.2); color: var(--error); }
+.btn-reject:hover { background: rgba(255, 92, 138, 0.4); }
 </style>
 </head>
 <body data-theme="dark">
@@ -265,10 +278,10 @@ const TESTS = [
 ];
 
 const SERVICES = [
-  { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Подсвечивает поставленные буквы.", badge:"словарь" },
+  { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Подсвечивает новые буквы.", badge:"словарь" },
   { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"стиль" },
-  { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Подсвечивает ошибки.", badge:"орфография" },
-  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика. Фоновая проверка.", badge:"грамматика" },
+  { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Ошибки можно принять/отклонить.", badge:"орфография" },
+  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика. Правки можно принять/отклонить.", badge:"грамматика" },
   { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные пробелы и пробелы в начале/конце. Подсвечивает желтым.", badge:"форматирование" }
 ];
 
@@ -276,15 +289,12 @@ const SERVICES = [
 function esc(s){ return String(s || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function applyTheme(t){ document.body.dataset.theme = t; const b=document.getElementById('themeBtn'); if(b) b.textContent = t==='dark'?'☾':'☀'; }
 
-// Копирование и очистка
 function setupActions(textId, resultId) {
   const textEl = document.getElementById(textId);
-  
-  // Кнопка "Копировать"
   const copyBtn = document.getElementById('btnCopy_' + textId);
   if (copyBtn) {
     copyBtn.onclick = () => {
-      const text = textEl.innerText || textEl.value || '';
+      const text = textEl.innerText || '';
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => {
         const old = copyBtn.textContent;
@@ -293,8 +303,6 @@ function setupActions(textId, resultId) {
       });
     };
   }
-
-  // Кнопка "Очистить"
   const clearBtn = document.getElementById('btnClear_' + textId);
   if (clearBtn) {
     clearBtn.onclick = () => {
@@ -429,7 +437,7 @@ function openService(id){
   if(id==='yoficator') {
     panel.innerHTML = `
       <h3>Ёфикатор</h3>
-      <div class="sp-desc">Введите текст. Буквы «ё» будут подсвечиваться красным.</div>
+      <div class="sp-desc">Введите текст. Буквы «ё», которые были добавлены, подсветятся зеленым.</div>
       <div class="editor-box" id="yoText" contenteditable="true" placeholder="Вставьте текст…"></div>
       <div class="action-bar">
         <button class="btn primary" id="yoRun">Ёфицировать</button>
@@ -478,10 +486,12 @@ function openService(id){
     loadFullCloudBase();
 
     document.getElementById('yoRun').onclick = ()=>{
-      let t = yoTextEl.innerText;
-      if(!t) return;
+      let originalText = yoTextEl.innerText;
+      if(!originalText) return;
       
-      let resultText = t.replace(/[а-яё]+/gi, (match) => {
+      let resultText = originalText;
+      // Применяем замены
+      resultText = resultText.replace(/[а-яё]+/gi, (match) => {
         const lowerMatch = match.toLowerCase();
         let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
         if (replacement) {
@@ -491,20 +501,26 @@ function openService(id){
         return match;
       });
 
+      // Подсветка только новых 'ё'
       let html = '';
-      let inYo = false;
-      for (let i = 0; i < resultText.length; i++) {
-        const char = resultText[i];
-        if (char === 'ё' || char === 'Ё') {
-          if (!inYo) { html += '<span class="hl-yo">'; inYo = true; }
-          html += esc(char);
+      let i = 0, j = 0;
+      while (i < originalText.length || j < resultText.length) {
+        if (i < originalText.length && j < resultText.length && originalText[i].toLowerCase() === resultText[j].toLowerCase()) {
+          html += esc(resultText[j]);
+          i++; j++;
+        } else if (j < resultText.length && (resultText[j] === 'ё' || resultText[j] === 'Ё')) {
+          // Найдена новая 'ё' (которой не было в оригинале)
+          html += `<span class="hl-yo">${esc(resultText[j])}</span>`;
+          j++;
         } else {
-          if (inYo) { html += '</span>'; inYo = false; }
-          if (char === '\n') html += '<br>';
-          else html += esc(char);
+          // Просто копируем, если что-то не совпало (вдруг ошибка)
+          if (j < resultText.length) {
+             html += esc(resultText[j] === '\n' ? '<br>' : resultText[j]);
+             j++;
+          } else { i++; }
         }
       }
-      if (inYo) html += '</span>';
+      
       yoTextEl.innerHTML = html;
     };
   }
@@ -534,9 +550,9 @@ function openService(id){
   if(id==='typos') {
     panel.innerHTML = `
       <h3>Опечатки</h3>
-      <div class="sp-desc">Сначала локальный словарь, затем фоновая проверка орфографии. Ошибки подсвечиваются прямо в тексте.</div>
+      <div class="sp-desc">Нажмите на ✓ или ✕ возле ошибки, чтобы принять или отклонить правку.</div>
       <div class="editor-box" id="typoText" contenteditable="true" placeholder="Вставьте текст…"></div>
-      <div class="action-bar">
+      <div class="action-bar" id="typoTopBar">
         <button class="btn primary" id="typoRun">Проверить</button>
         <button class="btn" id="btnClear_typoText">Очистить</button>
         <button class="btn" id="btnCopy_typoText">Копировать текст</button>
@@ -555,6 +571,67 @@ function openService(id){
 
     const typoTextEl = document.getElementById('typoText');
     setupActions('typoText', 'typoResult');
+    let currentIssues = [];
+
+    // Функция перерисовки текста с учетом текущего состояния (принято/отклонено)
+    function renderTypoText() {
+      let t = typoTextEl.innerText;
+      if (currentIssues.length === 0) {
+        typoTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
+        return;
+      }
+      
+      // Сортируем по убыванию позиции, чтобы замены не сбивали индексы
+      const sorted = [...currentIssues].filter(i => i.status !== 'rejected').sort((a,b) => b.start - a.start);
+      
+      let html = esc(t).replace(/\n/g, '<br>'); // Начинаем с чистого текста
+      
+      // Мы не можем просто заменить в HTML, поэтому пересобираем строку заново
+      // Это сложно, но надежно
+      let plainText = typoTextEl.innerText;
+      
+      // Если все отклонены - просто показываем текст
+      if (sorted.length === 0) {
+        typoTextEl.innerHTML = esc(plainText).replace(/\n/g, '<br>');
+        return;
+      }
+      
+      // Строим разметку с нуля на основе текущего текста
+      let resultHtml = '';
+      let lastIndex = 0;
+      
+      // Для отрисовки нам нужны исходные координаты в тексте, который сейчас в редакторе
+      // Но так как мы применяем замены, координаты могут съехать.
+      // Поэтому проще пересобрать текст с нуля, применив принятые замены.
+      
+      let textToRender = plainText;
+      
+      // Применяем ПРИНЯТЫЕ замены к тексту
+      const accepted = currentIssues.filter(i => i.status === 'accepted').sort((a,b) => b.start - a.start);
+      accepted.forEach(i => {
+        textToRender = textToRender.slice(0, i.start) + i.repl + textToRender.slice(i.end);
+      });
+
+      // Теперь подсвечиваем те, что еще в статусе pending
+      const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => a.start - b.start);
+      
+      // Так как мы применили замены, индексы pending съехали. 
+      // Нам нужно пересчитать их позиции. 
+      // Простой способ: не применять замены визуально, а рисовать всё сразу.
+      
+      // На самом деле, проще всего при "Принять" - перезапускать проверку. 
+      // Но давайте попробуем хак: мы храним оригинальный текст.
+      
+      // Вернемся к простому варианту: мы просто отрисовываем pending подсветку поверх текста.
+      // Если пользователь нажимает "Принять", мы МЕНЯЕМ сам текст в редакторе (заменяем слово),
+      // и убираем эту ошибку из списка.
+      
+      // Отрисовка состояния PENDING
+      // Восстанавливаем исходный текст (до всех правок), но с учетом того, что уже принято
+      let baseText = typoTextEl.innerText; 
+      // ВАЖНО: если мы нажмем "Принять", мы изменим innerText. 
+      // Поэтому для корректной работы кнопок, мы будем хранить оригинальный текст в переменной.
+    }
 
     document.getElementById('typoRun').onclick = async () => {
       const t = typoTextEl.innerText;
@@ -567,73 +644,161 @@ function openService(id){
       let m;
       while ((m = localRe.exec(t)) !== null) {
         const lower = m[0].toLowerCase();
-        if (LOCAL_TYPOS[lower]) localIssues.push({ word: m[0], replacement: LOCAL_TYPOS[lower], pos: m.index });
+        if (LOCAL_TYPOS[lower]) localIssues.push({ word: m[0], repl: LOCAL_TYPOS[lower], start: m.index, end: m.index + m[0].length, source: 'Словарь' });
       }
 
       const [yandex, lt] = await Promise.all([yandexSpell(t), languageTool(t)]);
       timer.stop();
 
-      const all = [];
-      localIssues.forEach(i => all.push({ source: 'Словарь', word: i.word, repl: i.replacement, start: i.pos, end: i.pos + i.word.length }));
+      const all = [...localIssues];
       if (Array.isArray(yandex)) {
-        yandex.forEach(e => all.push({ source: 'Орфография', word: e.word, repl: (e.s && e.s.length) ? e.s.join(', ') : '—', start: e.pos, end: e.pos + e.word.length }));
+        yandex.forEach(e => all.push({ source: 'Орфография', word: e.word, repl: (e.s && e.s.length) ? e.s[0] : '—', start: e.pos, end: e.pos + e.word.length }));
       }
       if (lt && Array.isArray(lt.matches)) {
         lt.matches.forEach(m => {
           const ctx = m.context || {};
           const word = (ctx.text || '').slice(ctx.offset, ctx.offset + ctx.length);
-          const repl = (m.replacements || []).slice(0, 3).map(r => r.value).join(' / ') || '—';
+          const repl = (m.replacements || []).slice(0, 1).map(r => r.value)[0] || '—'; // берем первый вариант
           const absStart = ctx.offset || 0;
-          all.push({ source: 'Грамматика', word: word || '…', repl, start: absStart, end: absStart + (ctx.length || 0) });
+          all.push({ source: 'Грамматика', word: word || '…', repl, start: absStart, end: absStart + (ctx.length || 0), msg: m.message });
         });
       }
 
+      // Сортируем по убыванию, чтобы применять замены с конца
+      all.sort((a,b) => b.start - a.start);
+      
+      // Убираем дубликаты
       const seen = new Set();
-      const uniq = all.filter(i => {
+      currentIssues = all.filter(i => {
         const key = (i.word || '').toLowerCase() + '|' + (i.repl || '').toLowerCase();
         if (seen.has(key)) return false;
         seen.add(key);
+        i.status = 'pending'; // pending, accepted, rejected
         return true;
       });
 
-      if (uniq.length === 0) {
-        if (!yandex && !lt) { resultEl.innerHTML = `<div class="ex bad">Внешние сервисы недоступны.</div>`; } 
-        else { resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`; }
-        typoTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
+      renderTypoList();
+    };
+
+    function renderTypoList() {
+      const resultEl = document.getElementById('typoResult');
+      if (currentIssues.length === 0) {
+        resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`;
+        typoTextEl.innerHTML = esc(typoTextEl.innerText).replace(/\n/g, '<br>');
         return;
       }
 
-      let htmlList = `<div class="res-summary err">✕ Замечаний: ${uniq.length}</div>`;
-      uniq.sort((a,b) => a.start - b.start);
+      let html = `
+        <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>✕ Замечаний: ${currentIssues.length}</span>
+          <div>
+            <button class="btn small" id="acceptAll">Принять все</button>
+            <button class="btn small" id="rejectAll">Отклонить все</button>
+          </div>
+        </div>
+      `;
 
-      let lastIndex = 0;
-      let highlightHtml = '';
+      // Отрисовка списка (сортируем по порядку в тексте для списка)
+      const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
       
-      uniq.forEach(i => {
-        if (i.start > lastIndex) highlightHtml += esc(t.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
-        const badText = t.slice(i.start, i.end) || i.word;
-        highlightHtml += `<span class="hl-typo" title="${esc(i.repl)}">${esc(badText)}</span>`;
-        lastIndex = i.end;
+      sortedForList.forEach((i, idx) => {
+        if (i.status === 'accepted') return; // Не показываем принятые
+        let border = 'var(--error)';
+        let bg = 'rgba(255,92,138,0.05)';
+        if (i.source === 'Грамматика') { border = 'var(--accent)'; bg = 'rgba(94,234,212,0.05)'; }
         
-        htmlList += `
-          <div class="issue" style="cursor:default;border-left-color:var(--error)">
-            <span class="i-rule">${esc(i.source)}</span>
+        let msgHtml = '';
+        if (i.msg) msgHtml = `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>`;
+
+        html += `
+          <div class="issue" style="border-left-color:${border}; background:${bg}">
+            <span class="i-rule" style="color:${border}">${esc(i.source)}</span>
             <span class="i-detail">
-              <b style="color:var(--error)">${esc(badText)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
+              <b style="color:var(--error)">${esc(i.word)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
+              ${msgHtml}
             </span>
           </div>`;
       });
-      if (lastIndex < t.length) highlightHtml += esc(t.slice(lastIndex)).replace(/\n/g, '<br>');
+
+      resultEl.innerHTML = html;
+
+      // Отрисовка текста с подсветкой
+      let text = typoTextEl.innerText; // Берем текущий текст
+      let highlightHtml = '';
+      let lastIndex = 0;
+      
+      // Сортируем для отрисовки по возрастанию
+      const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => a.start - b.start);
+      
+      pending.forEach(i => {
+        if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
+        const badText = text.slice(i.start, i.end) || i.word;
+        
+        // Добавляем тултип (title) и кнопки внутри span
+        highlightHtml += `<span class="hl-typo" title="${esc(i.repl)}">${esc(badText)}<button class="inline-btn btn-accept" data-action="accept" data-idx="${currentIssues.indexOf(i)}">✓</button><button class="inline-btn btn-reject" data-action="reject" data-idx="${currentIssues.indexOf(i)}">✕</button></span>`;
+        lastIndex = i.end;
+      });
+      if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
 
       typoTextEl.innerHTML = highlightHtml;
-      resultEl.innerHTML = htmlList;
-    };
+
+      // Обработчики кнопок
+      document.querySelectorAll('.hl-typo .inline-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const idx = +btn.dataset.idx;
+          const issue = currentIssues[idx];
+          
+          if (action === 'accept') {
+            issue.status = 'accepted';
+            // Применяем замену к тексту
+            let text = typoTextEl.innerText;
+            typoTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+            // Пересчитываем индексы для оставшихся (так как текст изменился)
+            // Для простоты, просто перезапустим проверку (костыль, но надежно)
+            // В идеале, нужно сдвигать индексы.
+            // Я сделаю простой сдвиг:
+            const diff = issue.repl.length - (issue.end - issue.start);
+            currentIssues.forEach(other => {
+              if (other.status === 'pending' && other.start > issue.start) {
+                other.start += diff;
+                other.end += diff;
+              }
+            });
+          } else if (action === 'reject') {
+            issue.status = 'rejected';
+          }
+          renderTypoList();
+        };
+      });
+
+      // Кнопки Принять все / Отклонить все
+      const acceptAllBtn = document.getElementById('acceptAll');
+      if (acceptAllBtn) acceptAllBtn.onclick = () => {
+        // Применяем все pending с конца
+        let text = typoTextEl.innerText;
+        const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => b.start - a.start);
+        pending.forEach(issue => {
+          text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+          issue.status = 'accepted';
+        });
+        typoTextEl.innerText = text;
+        renderTypoList();
+      };
+
+      const rejectAllBtn = document.getElementById('rejectAll');
+      if (rejectAllBtn) rejectAllBtn.onclick = () => {
+        currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+        renderTypoList();
+      };
+    }
   }
 
   if(id==='grammar') {
     panel.innerHTML = `
       <h3>Грамматика и пунктуация</h3>
-      <div class="sp-desc">Фоновая проверка пунктуации и согласования.</div>
+      <div class="sp-desc">Проверка пунктуации и согласования. Ошибки подсвечиваются в тексте.</div>
       <div class="editor-box" id="grammarText" contenteditable="true" placeholder="Вставьте текст…"></div>
       <div class="action-bar">
         <button class="btn primary" id="grammarRun">Проверить</button>
@@ -645,6 +810,111 @@ function openService(id){
     
     const grammarTextEl = document.getElementById('grammarText');
     setupActions('grammarText', 'grammarResult');
+    let currentIssues = [];
+
+    function renderGrammarText() {
+      const resultEl = document.getElementById('grammarResult');
+      if (currentIssues.length === 0) {
+        resultEl.innerHTML = `<div class="res-summary ok">✓ Ошибок не найдено</div>`;
+        grammarTextEl.innerHTML = esc(grammarTextEl.innerText).replace(/\n/g, '<br>');
+        return;
+      }
+
+      let html = `
+        <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>✕ Замечаний: ${currentIssues.length}</span>
+          <div>
+            <button class="btn small" id="acceptAllG">Принять все</button>
+            <button class="btn small" id="rejectAllG">Отклонить все</button>
+          </div>
+        </div>
+      `;
+
+      const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
+      sortedForList.forEach((i, idx) => {
+        if (i.status === 'accepted') return;
+        let border = 'var(--warn)';
+        if (i.issueType === 'misspelling') border = 'var(--error)';
+        else if (i.issueType === 'style' || i.issueType === 'locale-violation') border = 'var(--accent)';
+
+        html += `
+          <div class="issue" style="border-left-color:${border}">
+            <span class="i-rule" style="color:${border}">${esc(i.category)}</span>
+            <span class="i-detail">
+              ${esc(i.msg)}
+              <div style="margin-top:4px;">
+                <b style="color:var(--ok)">${esc(i.repl)}</b>
+              </div>
+            </span>
+          </div>`;
+      });
+
+      resultEl.innerHTML = html;
+
+      let text = grammarTextEl.innerText;
+      let highlightHtml = '';
+      let lastIndex = 0;
+      
+      const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => a.start - b.start);
+      
+      pending.forEach(i => {
+        if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
+        const badText = text.slice(i.start, i.end) || i.word;
+        
+        let border = 'var(--accent)';
+        if (i.issueType === 'misspelling') border = 'var(--error)';
+        else if (i.issueType === 'style') border = 'var(--warn)';
+        
+        highlightHtml += `<span class="hl-grammar" style="border-bottom-color:${border};" title="${esc(i.msg)} → ${esc(i.repl)}">${esc(badText)}<button class="inline-btn btn-accept" data-action="accept" data-idx="${currentIssues.indexOf(i)}">✓</button><button class="inline-btn btn-reject" data-action="reject" data-idx="${currentIssues.indexOf(i)}">✕</button></span>`;
+        lastIndex = i.end;
+      });
+      if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
+
+      grammarTextEl.innerHTML = highlightHtml;
+
+      document.querySelectorAll('.hl-grammar .inline-btn').forEach(btn => {
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          const action = btn.dataset.action;
+          const idx = +btn.dataset.idx;
+          const issue = currentIssues[idx];
+          
+          if (action === 'accept') {
+            issue.status = 'accepted';
+            let text = grammarTextEl.innerText;
+            grammarTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+            const diff = issue.repl.length - (issue.end - issue.start);
+            currentIssues.forEach(other => {
+              if (other.status === 'pending' && other.start > issue.start) {
+                other.start += diff;
+                other.end += diff;
+              }
+            });
+          } else if (action === 'reject') {
+            issue.status = 'rejected';
+          }
+          renderGrammarText();
+        };
+      });
+
+      const acceptAllBtn = document.getElementById('acceptAllG');
+      if (acceptAllBtn) acceptAllBtn.onclick = () => {
+        let text = grammarTextEl.innerText;
+        const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => b.start - a.start);
+        pending.forEach(issue => {
+          text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+          issue.status = 'accepted';
+        });
+        grammarTextEl.innerText = text;
+        renderGrammarText();
+      };
+
+      const rejectAllBtn = document.getElementById('rejectAllG');
+      if (rejectAllBtn) rejectAllBtn.onclick = () => {
+        currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+        renderGrammarText();
+      };
+    }
 
     document.getElementById('grammarRun').onclick = async () => {
       const t = grammarTextEl.innerText;
@@ -660,36 +930,25 @@ function openService(id){
       const matches = data.matches;
       if (matches.length === 0) { resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ошибок не найдено</div>`; return; }
 
-      let html = `<div class="res-summary err" style="margin-top:12px">✕ Найдено замечаний: ${matches.length}</div>`;
-      matches.forEach((m) => {
-        const category = m.rule?.category?.name || m.rule?.issueType || 'Замечание';
-        const message = m.message || '';
-        const context = m.context?.text || '';
-        const offset = m.context?.offset || 0;
-        const length = m.context?.length || 0;
-        const before = context.slice(0, offset);
-        const bad = context.slice(offset, offset + length);
-        const after = context.slice(offset + length);
-        const replacements = (m.replacements || []).slice(0, 5).map(r => r.value);
-        const replText = replacements.length ? replacements.join(' / ') : '—';
-        const issueType = (m.rule?.issueType || '').toLowerCase();
-        let borderColor = 'var(--warn)';
-        if (issueType === 'misspelling') borderColor = 'var(--error)';
-        else if (issueType === 'style' || issueType === 'locale-violation') borderColor = 'var(--accent)';
-
-        html += `
-          <div class="issue" style="cursor:default;border-left-color:${borderColor}">
-            <span class="i-rule" style="color:${borderColor}">${esc(category)}</span>
-            <span class="i-detail">
-              ${esc(message)}
-              <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">
-                ${esc(before)}<u style="color:${borderColor}">${esc(bad)}</u>${esc(after)}
-              </div>
-              <div style="margin-top:4px;font-size:12px">Замена: <b style="color:var(--ok)">${esc(replText)}</b></div>
-            </span>
-          </div>`;
+      currentIssues = matches.map(m => {
+        const ctx = m.context || {};
+        const word = (ctx.text || '').slice(ctx.offset, ctx.offset + ctx.length);
+        const repl = (m.replacements || []).slice(0, 1).map(r => r.value)[0] || '—';
+        const absStart = ctx.offset || 0;
+        return {
+          category: m.rule?.category?.name || m.rule?.issueType || 'Замечание',
+          msg: m.message || '',
+          word: word || '…',
+          repl: repl,
+          start: absStart,
+          end: absStart + (ctx.length || 0),
+          issueType: (m.rule?.issueType || '').toLowerCase(),
+          status: 'pending'
+        };
       });
-      resultEl.innerHTML = html;
+
+      currentIssues.sort((a,b) => b.start - a.start); // Сортируем для применения с конца
+      renderGrammarText();
     };
   }
 
