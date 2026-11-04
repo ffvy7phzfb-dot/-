@@ -313,7 +313,7 @@ const SUPABASE_URL = "https://rrmnjskiipkfptxdgcxa.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3LcmMY-lEofJkI3tffcQjw_lbJtPqqU";
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// ДЕФОЛТНЫЕ ПРАВИЛА (если база пустая)
+// ДЕФОЛТНЫЕ ПРАВИЛА
 const DEFAULT_RULES = [
   { id:"md-bold", group:"Markdown", title:"Жирный — только для ключевых терминов", date:"2026-10-01", desc:"Выделяйте **жирным** не более одного-двух слов в абзаце.", bad:"**Это очень важный** и **крайне нужный** текст.", good:"Это **важный** текст, но без лишних выделений." },
   { id:"md-italic", group:"Markdown", title:"Курсив — для названий и иноязычных слов", date:"2026-10-01", desc:"Курсивом оформляйте названия произведений и латиницу.", bad:"*Он сказал* что *книга* хорошая.", good:"Он сказал, что *«Мастер и Маргарита»* — книга на все времена." },
@@ -321,9 +321,6 @@ const DEFAULT_RULES = [
   { id:"typo-dash", group:"Типографика", title:"Тире — длинное (—), не дефис (-)", date:"2026-10-28", desc:"В роли тире используем длинное тире с пробелами.", bad:"Москва - столица России.", good:"Москва — столица России." }
 ];
 let RULES = [];
-
-const DEFAULT_YO = [["еще","ещё"],["пошел","пошёл"],["пришел","пришёл"],["ежик","ёжик"],["елка","ёлка"],["мед","мёд"],["черный","чёрный"],["желтый","жёлтый"],["щелка","щёлка"],["печенка","печёнка"]];
-let YO = [];
 
 const CANCELO = [["является","—"],["осуществляется","делается"],["в рамках","в / по"],["на сегодняшний день","сегодня"],["в целях","чтобы"],["данный","этот"],["необходимо отметить","важно"],["следует подчеркнуть","подчеркнём"],["в связи с тем что","потому что"],["в настоящее время","сейчас"],["производить","делать"],["обеспечивать","давать"],["в соответствии с","по"],["с целью","чтобы"],["имеет место быть","есть"]];
 
@@ -341,6 +338,10 @@ let USER = null;
 let CHATS = [];
 let MSGS = {};
 let activeChat = 'general';
+
+// Кэш для ёфикатора
+let yoMapCache = null;
+let YO = []; 
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
 function esc(s){ return String(s || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -365,14 +366,7 @@ async function loadAllData() {
       RULES = rules.map(r => ({...r, desc: r.desc_text}));
     }
 
-    let { data: yo } = await db.from('yoficator').select('*');
-    if (!yo || yo.length === 0) {
-      await db.from('yoficator').insert(DEFAULT_YO.map(p => ({from_word: p[0], to_word: p[1]})));
-      YO = DEFAULT_YO.map(p=>({from:p[0], to:p[1]}));
-    } else {
-      YO = yo.map(p => ({from: p.from_word, to: p.to_word}));
-    }
-
+    // Грузим чаты
     let { data: chats } = await db.from('chats').select('*');
     if (!chats || chats.length === 0) {
       await db.from('chats').insert([{id: 'general', name: 'Общий чат'}]);
@@ -381,6 +375,8 @@ async function loadAllData() {
       CHATS = chats;
     }
     await loadMessages(activeChat);
+    
+    // Ёфикатор грузим лениво (только когда откроют сервис), чтобы не тормозить вход
   } catch (e) {
     console.error(e);
     toast('Ошибка облака', 'Проверьте подключение к Supabase');
@@ -513,33 +509,90 @@ function renderServices(){
   g.innerHTML = SERVICES.map(s=>`<div class="service-card" data-svc="${s.id}"><div class="s-icon">${esc(s.icon)}</div><div class="s-name">${esc(s.name)}</div><div class="s-desc">${esc(s.desc)}</div><span class="s-badge">${esc(s.badge)}</span></div>`).join('');
   g.querySelectorAll('[data-svc]').forEach(c=> c.onclick = ()=> openService(c.dataset.svc));
 }
+
+async function getYoMap() {
+  if (yoMapCache) return yoMapCache;
+  const { data, error } = await db.from('yoficator').select('from_word, to_word');
+  if (error) throw error;
+  
+  yoMapCache = new Map();
+  YO = []; // Для отображения списка в интерфейсе
+  data.forEach(item => {
+    if(item.from_word && item.to_word) {
+      yoMapCache.set(item.from_word.toLowerCase().trim(), item.to_word.toLowerCase().trim());
+      YO.push({from: item.from_word, to: item.to_word});
+    }
+  });
+  return yoMapCache;
+}
+
 function openService(id){
   const s = SERVICES.find(x=>x.id===id); if(!s) return;
   const panel = document.getElementById('servicePanel'); panel.classList.add('show');
+  
   if(id==='yoficator') {
-    panel.innerHTML = `<h3>Ёфикатор</h3><div class="sp-desc">Словарь общий для всех пользователей.</div>
+    panel.innerHTML = `<h3>Ёфикатор</h3><div class="sp-desc">Словарь общий для всех пользователей. Загружается из облака.</div>
       <div class="admin-row"><input id="yoFrom" placeholder="еще"><input id="yoTo" placeholder="ещё"><button class="btn primary" id="yoAdd">Добавить</button></div>
-      <div class="yo-list" id="yoList"></div>
+      <div class="yo-list" id="yoList"><span style="color:var(--muted);font-size:13px">Загрузка словаря...</span></div>
       <div class="field" style="margin-top:14px"><textarea id="yoText" placeholder="Текст для ёфикации…" style="min-height:100px"></textarea></div>
       <button class="btn primary" id="yoRun">Ёфицировать</button><div class="typo-result" id="yoResult"></div>`;
     
-    const renderList = ()=>{
+    // Асинхронная отрисовка списка
+    const renderList = async () => {
       const l = document.getElementById('yoList');
-      l.innerHTML = YO.map((p,i)=>`<span class="yo-chip">${esc(p.from)} → <span class="yo-ok">${esc(p.to)}</span></span>`).join('');
+      try {
+        const map = await getYoMap();
+        // Показываем только первые 100 слов, чтобы не вешать браузер на 5000 элементов
+        const preview = YO.slice(0, 100);
+        l.innerHTML = preview.map(p=>`<span class="yo-chip">${esc(p.from)} → <span class="yo-ok">${esc(p.to)}</span></span>`).join('') + 
+          (YO.length > 100 ? `<span class="yo-chip" style="background:transparent;border-color:var(--border)">... и еще ${YO.length - 100}</span>` : '');
+      } catch(e) {
+        l.innerHTML = `<span style="color:var(--error)">Ошибка загрузки: ${esc(e.message)}</span>`;
+      }
     };
     renderList();
+
     document.getElementById('yoAdd').onclick = async ()=>{
       const f=document.getElementById('yoFrom').value.trim(), t=document.getElementById('yoTo').value.trim();
       if(!f||!t) return; 
       await db.from('yoficator').insert([{from_word: f, to_word: t}]);
-      YO.push({from:f,to:t}); renderList();
+      
+      // Обновляем кэш без повторной загрузки всей базы
+      if (yoMapCache) yoMapCache.set(f.toLowerCase(), t.toLowerCase());
+      YO.push({from: f, to: t});
+      
+      renderList();
       document.getElementById('yoFrom').value=''; document.getElementById('yoTo').value='';
+      toast('Словарь', 'Слово добавлено');
     };
-    document.getElementById('yoRun').onclick = ()=>{
-      const t = document.getElementById('yoText').value; const map={}; YO.forEach(p=>map[p.from.toLowerCase()]=p.to);
-      document.getElementById('yoResult').innerHTML = `<div class="ex good">${esc(t.replace(/\b[а-яё]+\b/gi,w=>map[w.toLowerCase()]||w))}</div>`;
+
+    document.getElementById('yoRun').onclick = async ()=>{
+      const t = document.getElementById('yoText').value;
+      if(!t) return;
+      const resultEl = document.getElementById('yoResult');
+      resultEl.innerHTML = `<div style="color:var(--muted)">Загрузка словаря из базы...</div>`;
+      
+      try {
+        const map = await getYoMap();
+        const resultText = t.replace(/[а-яё]+/gi, (match) => {
+          const lowerMatch = match.toLowerCase();
+          if (map.has(lowerMatch)) {
+            const replacement = map.get(lowerMatch);
+            // Сохраняем заглавную букву
+            if (match[0] === match[0].toUpperCase()) {
+              return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+            }
+            return replacement;
+          }
+          return match;
+        });
+        resultEl.innerHTML = `<div class="ex good">${esc(resultText)}</div>`;
+      } catch(e) {
+        resultEl.innerHTML = `<div class="ex bad">Ошибка: ${esc(e.message)}</div>`;
+      }
     };
   }
+  
   if(id==='cancelo') {
     panel.innerHTML = `<h3>Канцелярит</h3><div class="field"><textarea id="canceloInput" placeholder="Вставьте текст…" style="min-height:120px"></textarea></div><button class="btn primary" id="canceloRun">Проверить</button><div class="typo-result" id="canceloResult"></div>`;
     document.getElementById('canceloRun').onclick = ()=>{
