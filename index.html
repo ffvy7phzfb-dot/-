@@ -129,17 +129,18 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .typo-result{margin-top:14px}
 .space-item { margin-bottom: 10px; background: rgba(255, 209, 102, 0.08); border-left: 3px solid var(--warn); padding: 10px; border-radius: 9px; font-size: 13px;}
 
-/* СТИЛИ ДЛЯ РЕДАКТОРА С ПОДСВЕТКОЙ */
+/* ИСПРАВЛЕННЫЙ РЕДАКТОР (без белого фона) */
+.field { margin-bottom: 16px; }
 .editor-box {
   width: 100%;
   min-height: 200px;
   max-height: 400px;
   overflow-y: auto;
-  background: var(--input-bg);
+  background: var(--input-bg) !important; /* Принудительно темный */
   border: 1px solid var(--border-strong);
   border-radius: 10px;
   padding: 16px;
-  color: var(--text);
+  color: var(--text) !important;
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.6;
@@ -148,9 +149,12 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   word-wrap: break-word;
   transition: border-color .2s;
   margin-bottom: 16px;
+  -webkit-user-modify: read-write-plaintext-only; /* Отключает вставку форматирования из Word */
 }
 .editor-box:focus {
   border-color: var(--accent);
+  background: var(--input-bg) !important; /* Убирает белый фон при клике */
+  color: var(--text) !important;
 }
 .editor-box:empty:before {
   content: attr(placeholder);
@@ -159,6 +163,8 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   pointer-events: none;
   display: block;
 }
+/* Стили для кнопок */
+.action-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 /* Подсветки */
 .hl-yo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
 .hl-typo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
@@ -270,6 +276,36 @@ const SERVICES = [
 function esc(s){ return String(s || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function applyTheme(t){ document.body.dataset.theme = t; const b=document.getElementById('themeBtn'); if(b) b.textContent = t==='dark'?'☾':'☀'; }
 
+// Копирование и очистка
+function setupActions(textId, resultId) {
+  const textEl = document.getElementById(textId);
+  
+  // Кнопка "Копировать"
+  const copyBtn = document.getElementById('btnCopy_' + textId);
+  if (copyBtn) {
+    copyBtn.onclick = () => {
+      const text = textEl.innerText || textEl.value || '';
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        const old = copyBtn.textContent;
+        copyBtn.textContent = 'Скопировано!';
+        setTimeout(() => copyBtn.textContent = old, 1500);
+      });
+    };
+  }
+
+  // Кнопка "Очистить"
+  const clearBtn = document.getElementById('btnClear_' + textId);
+  if (clearBtn) {
+    clearBtn.onclick = () => {
+      if (textEl.tagName === 'TEXTAREA') textEl.value = '';
+      else textEl.innerHTML = '';
+      const resEl = document.getElementById(resultId);
+      if (resEl) resEl.innerHTML = '';
+    };
+  }
+}
+
 function startTimer(container, label = 'Проверяю…') {
   container.innerHTML = `
     <div class="empty" style="display:flex;align-items:center;justify-content:center;gap:10px">
@@ -278,9 +314,7 @@ function startTimer(container, label = 'Проверяю…') {
     </div>`;
   const el = container.querySelector('.timer-val');
   const t0 = performance.now();
-  const iv = setInterval(() => {
-    el.textContent = ((performance.now() - t0) / 1000).toFixed(1) + ' с';
-  }, 100);
+  const iv = setInterval(() => { el.textContent = ((performance.now() - t0) / 1000).toFixed(1) + ' с'; }, 100);
   return { stop: () => { clearInterval(iv); return ((performance.now() - t0) / 1000); } };
 }
 
@@ -397,8 +431,10 @@ function openService(id){
       <h3>Ёфикатор</h3>
       <div class="sp-desc">Введите текст. Буквы «ё» будут подсвечиваться красным.</div>
       <div class="editor-box" id="yoText" contenteditable="true" placeholder="Вставьте текст…"></div>
-      <div style="margin-bottom:16px;">
+      <div class="action-bar">
         <button class="btn primary" id="yoRun">Ёфицировать</button>
+        <button class="btn" id="btnClear_yoText">Очистить</button>
+        <button class="btn" id="btnCopy_yoText">Копировать текст</button>
       </div>
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
         <div class="sp-desc" style="margin-bottom:8px">Статус облачной базы:</div>
@@ -415,6 +451,8 @@ function openService(id){
     };
 
     let cloudDict = {};
+    const yoTextEl = document.getElementById('yoText');
+    setupActions('yoText', 'yoResult');
 
     const loadFullCloudBase = async () => {
       const listEl = document.getElementById('yoList');
@@ -437,11 +475,8 @@ function openService(id){
         if (listEl) listEl.innerHTML = `<span style="color:var(--error)">Ошибка: ${esc(err.message)}</span>`;
       }
     };
-
     loadFullCloudBase();
 
-    const yoTextEl = document.getElementById('yoText');
-    
     document.getElementById('yoRun').onclick = ()=>{
       let t = yoTextEl.innerText;
       if(!t) return;
@@ -450,15 +485,12 @@ function openService(id){
         const lowerMatch = match.toLowerCase();
         let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
         if (replacement) {
-          if (match[0] === match[0].toUpperCase()) {
-            return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-          }
+          if (match[0] === match[0].toUpperCase()) return replacement.charAt(0).toUpperCase() + replacement.slice(1);
           return replacement;
         }
         return match;
       });
 
-      // Подсветка букв ё
       let html = '';
       let inYo = false;
       for (let i = 0; i < resultText.length; i++) {
@@ -468,20 +500,32 @@ function openService(id){
           html += esc(char);
         } else {
           if (inYo) { html += '</span>'; inYo = false; }
-          if (char === '\n') { html += '<br>'; }
-          else { html += esc(char); }
+          if (char === '\n') html += '<br>';
+          else html += esc(char);
         }
       }
       if (inYo) html += '</span>';
-
       yoTextEl.innerHTML = html;
     };
   }
   
   if(id==='cancelo') {
-    panel.innerHTML = `<h3>Канцелярит</h3><div class="field"><textarea id="canceloInput" placeholder="Вставьте текст…"></textarea></div><button class="btn primary" id="canceloRun">Проверить</button><div class="typo-result" id="canceloResult"></div>`;
+    panel.innerHTML = `
+      <h3>Канцелярит</h3>
+      <div class="sp-desc">Находит тяжёлые обороты в тексте.</div>
+      <div class="editor-box" id="canceloText" contenteditable="true" placeholder="Вставьте текст…"></div>
+      <div class="action-bar">
+        <button class="btn primary" id="canceloRun">Проверить</button>
+        <button class="btn" id="btnClear_canceloText">Очистить</button>
+        <button class="btn" id="btnCopy_canceloText">Копировать текст</button>
+      </div>
+      <div class="typo-result" id="canceloResult"></div>
+    `;
+    const canceloTextEl = document.getElementById('canceloText');
+    setupActions('canceloText', 'canceloResult');
+    
     document.getElementById('canceloRun').onclick = ()=>{
-      const t = document.getElementById('canceloInput').value; const found=[];
+      const t = canceloTextEl.innerText; const found=[];
       CANCELO.forEach(([w,r])=>{ const re=new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'); const m=t.match(re); if(m) found.push({w:m[0],r}); });
       document.getElementById('canceloResult').innerHTML = found.length ? found.map(f=>`<div class="issue"><b>${esc(f.w)}</b> → <span style="color:var(--ok)">${esc(f.r)}</span></div>`).join('') : `<div class="res-summary ok">Канцелярита нет</div>`;
     };
@@ -492,8 +536,10 @@ function openService(id){
       <h3>Опечатки</h3>
       <div class="sp-desc">Сначала локальный словарь, затем фоновая проверка орфографии. Ошибки подсвечиваются прямо в тексте.</div>
       <div class="editor-box" id="typoText" contenteditable="true" placeholder="Вставьте текст…"></div>
-      <div style="margin-bottom:16px;">
+      <div class="action-bar">
         <button class="btn primary" id="typoRun">Проверить</button>
+        <button class="btn" id="btnClear_typoText">Очистить</button>
+        <button class="btn" id="btnCopy_typoText">Копировать текст</button>
       </div>
       <div class="typo-result" id="typoResult"></div>
     `;
@@ -508,6 +554,7 @@ function openService(id){
     };
 
     const typoTextEl = document.getElementById('typoText');
+    setupActions('typoText', 'typoResult');
 
     document.getElementById('typoRun').onclick = async () => {
       const t = typoTextEl.innerText;
@@ -520,22 +567,17 @@ function openService(id){
       let m;
       while ((m = localRe.exec(t)) !== null) {
         const lower = m[0].toLowerCase();
-        if (LOCAL_TYPOS[lower]) {
-          localIssues.push({ word: m[0], replacement: LOCAL_TYPOS[lower], pos: m.index });
-        }
+        if (LOCAL_TYPOS[lower]) localIssues.push({ word: m[0], replacement: LOCAL_TYPOS[lower], pos: m.index });
       }
 
       const [yandex, lt] = await Promise.all([yandexSpell(t), languageTool(t)]);
       timer.stop();
 
       const all = [];
-
       localIssues.forEach(i => all.push({ source: 'Словарь', word: i.word, repl: i.replacement, start: i.pos, end: i.pos + i.word.length }));
-
       if (Array.isArray(yandex)) {
         yandex.forEach(e => all.push({ source: 'Орфография', word: e.word, repl: (e.s && e.s.length) ? e.s.join(', ') : '—', start: e.pos, end: e.pos + e.word.length }));
       }
-
       if (lt && Array.isArray(lt.matches)) {
         lt.matches.forEach(m => {
           const ctx = m.context || {};
@@ -592,13 +634,20 @@ function openService(id){
     panel.innerHTML = `
       <h3>Грамматика и пунктуация</h3>
       <div class="sp-desc">Фоновая проверка пунктуации и согласования.</div>
-      <div class="field"><textarea id="grammarText" placeholder="Вставьте текст…"></textarea></div>
-      <button class="btn primary" id="grammarRun">Проверить</button>
+      <div class="editor-box" id="grammarText" contenteditable="true" placeholder="Вставьте текст…"></div>
+      <div class="action-bar">
+        <button class="btn primary" id="grammarRun">Проверить</button>
+        <button class="btn" id="btnClear_grammarText">Очистить</button>
+        <button class="btn" id="btnCopy_grammarText">Копировать текст</button>
+      </div>
       <div class="typo-result" id="grammarResult"></div>
     `;
+    
+    const grammarTextEl = document.getElementById('grammarText');
+    setupActions('grammarText', 'grammarResult');
 
     document.getElementById('grammarRun').onclick = async () => {
-      const t = document.getElementById('grammarText').value;
+      const t = grammarTextEl.innerText;
       const resultEl = document.getElementById('grammarResult');
       if (!t.trim()) { resultEl.innerHTML = ''; return; }
 
@@ -649,16 +698,18 @@ function openService(id){
       <h3>Лишние пробелы</h3>
       <div class="sp-desc">Двойные, тройные пробелы и пробелы в начале/конце строк. Подсвечиваются желтым.</div>
       <div class="editor-box" id="spaceText" contenteditable="true" placeholder="Вставьте текст для проверки пробелов…"></div>
-      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+      <div class="action-bar">
         <button class="btn primary" id="spaceRun">Проверить</button>
         <button class="btn" id="spaceClear">Очистить лишние</button>
-        <button class="btn" id="spaceCopy">Копировать текст</button>
+        <button class="btn" id="btnClear_spaceText">Очистить всё</button>
+        <button class="btn" id="btnCopy_spaceText">Копировать текст</button>
       </div>
       <div class="typo-result" id="spaceResult"></div>
     `;
 
     const spaceTextEl = document.getElementById('spaceText');
     const spaceResultEl = document.getElementById('spaceResult');
+    setupActions('spaceText', 'spaceResult');
 
     function renderSpaces(text) {
       let count = 0;
@@ -670,9 +721,7 @@ function openService(id){
       let lastIndex = 0;
       const zones = [];
       
-      while ((match = multiSpaces.exec(text)) !== null) {
-        zones.push({ start: match.index, end: match.index + match[0].length, type: 'multi', text: match[0] });
-      }
+      while ((match = multiSpaces.exec(text)) !== null) zones.push({ start: match.index, end: match.index + match[0].length, type: 'multi', text: match[0] });
       
       const lines = text.split('\n');
       let currentPos = 0;
@@ -726,16 +775,6 @@ function openService(id){
       t = t.trim();
       spaceTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
       spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Все лишние пробелы удалены</div>`;
-    };
-
-    document.getElementById('spaceCopy').onclick = () => {
-      const t = spaceTextEl.innerText;
-      if (!t) return;
-      navigator.clipboard.writeText(t).then(() => {
-        const originalText = document.getElementById('spaceCopy').textContent;
-        document.getElementById('spaceCopy').textContent = 'Скопировано!';
-        setTimeout(() => { document.getElementById('spaceCopy').textContent = originalText; }, 2000);
-      });
     };
   }
 }
