@@ -127,18 +127,23 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .service-panel .sp-desc{color:var(--muted);font-size:13px;margin-bottom:16px}
 .yo-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:220px;overflow-y:auto}
 .typo-result{margin-top:14px}
+.space-item { margin-bottom: 10px; background: rgba(255, 209, 102, 0.08); border-left: 3px solid var(--warn); padding: 10px; border-radius: 9px; font-size: 13px;}
+.space-highlight { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-radius: 3px; font-weight: bold;}
 
-/* ИСПРАВЛЕНИЕ ПОЛЕЙ ВВОДА В СЕРВИСАХ */
-.field{margin-bottom:12px}
+/* ИСПРАВЛЕННЫЕ БОЛЬШИЕ ТЕМНЫЕ ПОЛЯ ВВОДА */
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .field textarea { 
   width: 100%; 
+  min-height: 200px;
   background: var(--input-bg); 
   border: 1px solid var(--border-strong); 
-  border-radius: 9px; 
-  padding: 12px 14px; 
+  border-radius: 10px; 
+  padding: 16px; 
   color: var(--text); 
   font-family: var(--font-mono); 
-  font-size: 13.5px; 
+  font-size: 14px; 
+  line-height: 1.6;
   outline: none; 
   resize: vertical; 
   transition: border-color .2s;
@@ -244,7 +249,8 @@ const SERVICES = [
   { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Общий для всех.", badge:"словарь" },
   { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"стиль" },
   { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + фоновая проверка орфографии.", badge:"орфография" },
-  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика. Фоновая проверка.", badge:"грамматика" }
+  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика. Фоновая проверка.", badge:"грамматика" },
+  { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные и тройные пробелы, а также пробелы в начале и конце строк.", badge:"форматирование" }
 ];
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
@@ -265,7 +271,6 @@ function startTimer(container, label = 'Проверяю…') {
   return { stop: () => { clearInterval(iv); return ((performance.now() - t0) / 1000); } };
 }
 
-// ИСПРАВЛЕНО: Яндекс Спеллер теперь шлет POST, чтобы не терять спецсимволы
 async function yandexSpell(text) {
   const url = 'https://speller.yandex.net/services/spellservice.json/checkText';
   const body = new URLSearchParams({ text, lang: 'ru', options: '4' });
@@ -408,7 +413,7 @@ function openService(id){
     panel.innerHTML = `
       <h3>Ёфикатор</h3>
       <div class="sp-desc">Введите текст. Сначала проверяется локальный словарь, затем облачный (Supabase).</div>
-      <div class="field"><textarea id="yoText" placeholder="Вставьте текст…" style="min-height:120px"></textarea></div>
+      <div class="field"><textarea id="yoText" placeholder="Вставьте текст…"></textarea></div>
       <button class="btn primary" id="yoRun">Ёфицировать</button>
       <div class="typo-result" id="yoResult"></div>
       
@@ -492,7 +497,7 @@ function openService(id){
   }
   
   if(id==='cancelo') {
-    panel.innerHTML = `<h3>Канцелярит</h3><div class="field"><textarea id="canceloInput" placeholder="Вставьте текст…" style="min-height:120px"></textarea></div><button class="btn primary" id="canceloRun">Проверить</button><div class="typo-result" id="canceloResult"></div>`;
+    panel.innerHTML = `<h3>Канцелярит</h3><div class="field"><textarea id="canceloInput" placeholder="Вставьте текст…"></textarea></div><button class="btn primary" id="canceloRun">Проверить</button><div class="typo-result" id="canceloResult"></div>`;
     document.getElementById('canceloRun').onclick = ()=>{
       const t = document.getElementById('canceloInput').value; const found=[];
       CANCELO.forEach(([w,r])=>{ const re=new RegExp('\\b'+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'); const m=t.match(re); if(m) found.push({w:m[0],r}); });
@@ -504,7 +509,7 @@ function openService(id){
     panel.innerHTML = `
       <h3>Опечатки</h3>
       <div class="sp-desc">Сначала локальный словарь, затем фоновая проверка орфографии.</div>
-      <div class="field"><textarea id="typoText" placeholder="Вставьте текст…" style="min-height:140px"></textarea></div>
+      <div class="field"><textarea id="typoText" placeholder="Вставьте текст…"></textarea></div>
       <button class="btn primary" id="typoRun">Проверить</button>
       <div class="typo-result" id="typoResult"></div>
     `;
@@ -586,7 +591,6 @@ function openService(id){
         return true;
       });
 
-      // Если ни локальный, ни внешние не справились
       if (uniq.length === 0) {
         if (!yandex && !lt) {
            resultEl.innerHTML = `<div class="ex bad" style="margin-top:12px">Внешние сервисы недоступны (возможно, блокировка браузера или лимит). Локальный словарь ничего не нашел.</div>`;
@@ -622,7 +626,7 @@ function openService(id){
     panel.innerHTML = `
       <h3>Грамматика и пунктуация</h3>
       <div class="sp-desc">Фоновая проверка пунктуации и согласования.</div>
-      <div class="field"><textarea id="grammarText" placeholder="Вставьте текст…" style="min-height:140px"></textarea></div>
+      <div class="field"><textarea id="grammarText" placeholder="Вставьте текст…"></textarea></div>
       <button class="btn primary" id="grammarRun">Проверить</button>
       <div class="typo-result" id="grammarResult"></div>
     `;
@@ -684,6 +688,103 @@ function openService(id){
       });
 
       resultEl.innerHTML = html;
+    };
+  }
+
+  if(id==='spaces') {
+    panel.innerHTML = `
+      <h3>Лишние пробелы</h3>
+      <div class="sp-desc">Находит двойные и более пробелы, а также пробелы в начале и конце строк. Подсвечивает их желтым.</div>
+      <div class="field"><textarea id="spaceInput" placeholder="Вставьте текст для проверки пробелов…"></textarea></div>
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <button class="btn primary" id="spaceRun">Проверить</button>
+        <button class="btn" id="spaceClear">Очистить лишние</button>
+        <button class="btn" id="spaceCopy">Копировать текст</button>
+      </div>
+      <div class="typo-result" id="spaceResult"></div>
+    `;
+
+    const spaceTextEl = document.getElementById('spaceInput');
+    const spaceResultEl = document.getElementById('spaceResult');
+
+    function renderSpaces(text) {
+      let count = 0;
+      let resultHtml = '';
+
+      // Ищем двойные и более пробелы
+      const multiSpaces = / {2,}/g;
+      let match;
+      while ((match = multiSpaces.exec(text)) !== null) {
+        count++;
+        const start = Math.max(0, match.index - 20);
+        const end = Math.min(text.length, match.index + match[0].length + 20);
+        const before = text.slice(start, match.index);
+        const after = text.slice(match.index + match[0].length, end);
+        
+        resultHtml += `
+          <div class="space-item">
+            <div style="color:var(--warn); margin-bottom:4px;"><b>Найдено ${match[0].length} пробелов подряд</b></div>
+            <div style="font-family:var(--font-mono); font-size:12px; color:var(--muted);">
+              ${start > 0 ? '…' : ''}${esc(before)}<span class="space-highlight">${' '.repeat(match[0].length)}</span>${esc(after)}${end < text.length ? '…' : ''}
+            </div>
+          </div>`;
+      }
+
+      // Ищем пробелы в начале и конце строк
+      const lines = text.split('\n');
+      lines.forEach((line, i) => {
+        if (/^ +/.test(line)) {
+          count++;
+          const spaces = line.match(/^ +/)[0];
+          resultHtml += `
+            <div class="space-item">
+              <div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в начале строки ${i + 1} (${spaces.length} шт.)</b></div>
+            </div>`;
+        }
+        if (/ +$/.test(line)) {
+          count++;
+          const spaces = line.match(/ +$/)[0];
+          resultHtml += `
+            <div class="space-item">
+              <div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в конце строки ${i + 1} (${spaces.length} шт.)</b></div>
+            </div>`;
+        }
+      });
+
+      if (count === 0) {
+        spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Лишних пробелов не найдено</div>`;
+      } else {
+        spaceResultEl.innerHTML = `<div class="res-summary err" style="background:rgba(255,209,102,0.08); color:var(--warn); border-color:rgba(255,209,102,0.2)">✕ Найдено проблем с пробелами: ${count}</div>` + resultHtml;
+      }
+    }
+
+    document.getElementById('spaceRun').onclick = () => {
+      const t = spaceTextEl.value;
+      if (!t) return;
+      renderSpaces(t);
+    };
+
+    document.getElementById('spaceClear').onclick = () => {
+      let t = spaceTextEl.value;
+      // Убираем двойные пробелы
+      t = t.replace(/ {2,}/g, ' ');
+      // Убираем пробелы в начале и конце строк
+      t = t.split('\n').map(line => line.trim()).join('\n');
+      // Убираем пустые строки в начале и конце текста (по желанию, оставлю только trim)
+      t = t.trim();
+      
+      spaceTextEl.value = t;
+      spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Все лишние пробелы удалены</div>`;
+    };
+
+    document.getElementById('spaceCopy').onclick = () => {
+      const t = spaceTextEl.value;
+      if (!t) return;
+      navigator.clipboard.writeText(t).then(() => {
+        const originalText = document.getElementById('spaceCopy').textContent;
+        document.getElementById('spaceCopy').textContent = 'Скопировано!';
+        setTimeout(() => { document.getElementById('spaceCopy').textContent = originalText; }, 2000);
+      });
     };
   }
 }
