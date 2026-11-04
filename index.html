@@ -339,10 +339,6 @@ let CHATS = [];
 let MSGS = {};
 let activeChat = 'general';
 
-// Кэш для ёфикатора
-let yoMapCache = null;
-let YO = []; 
-
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
 function esc(s){ return String(s || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function applyTheme(t){ document.body.dataset.theme = t; const b=document.getElementById('themeBtn'); if(b) b.textContent = t==='dark'?'☾':'☀'; }
@@ -375,8 +371,6 @@ async function loadAllData() {
       CHATS = chats;
     }
     await loadMessages(activeChat);
-    
-    // Ёфикатор грузим лениво (только когда откроют сервис), чтобы не тормозить вход
   } catch (e) {
     console.error(e);
     toast('Ошибка облака', 'Проверьте подключение к Supabase');
@@ -510,75 +504,65 @@ function renderServices(){
   g.querySelectorAll('[data-svc]').forEach(c=> c.onclick = ()=> openService(c.dataset.svc));
 }
 
-async function getYoMap() {
-  if (yoMapCache) return yoMapCache;
-  const { data, error } = await db.from('yoficator').select('from_word, to_word');
-  if (error) throw error;
-  
-  yoMapCache = new Map();
-  YO = []; // Для отображения списка в интерфейсе
-  data.forEach(item => {
-    if(item.from_word && item.to_word) {
-      yoMapCache.set(item.from_word.toLowerCase().trim(), item.to_word.toLowerCase().trim());
-      YO.push({from: item.from_word, to: item.to_word});
-    }
-  });
-  return yoMapCache;
-}
-
 function openService(id){
   const s = SERVICES.find(x=>x.id===id); if(!s) return;
   const panel = document.getElementById('servicePanel'); panel.classList.add('show');
   
   if(id==='yoficator') {
-    panel.innerHTML = `<h3>Ёфикатор</h3><div class="sp-desc">Словарь общий для всех пользователей. Загружается из облака.</div>
-      <div class="admin-row"><input id="yoFrom" placeholder="еще"><input id="yoTo" placeholder="ещё"><button class="btn primary" id="yoAdd">Добавить</button></div>
-      <div class="yo-list" id="yoList"><span style="color:var(--muted);font-size:13px">Загрузка словаря...</span></div>
-      <div class="field" style="margin-top:14px"><textarea id="yoText" placeholder="Текст для ёфикации…" style="min-height:100px"></textarea></div>
-      <button class="btn primary" id="yoRun">Ёфицировать</button><div class="typo-result" id="yoResult"></div>`;
-    
-    // Асинхронная отрисовка списка
-    const renderList = async () => {
-      const l = document.getElementById('yoList');
-      try {
-        const map = await getYoMap();
-        // Показываем только первые 100 слов, чтобы не вешать браузер на 5000 элементов
-        const preview = YO.slice(0, 100);
-        l.innerHTML = preview.map(p=>`<span class="yo-chip">${esc(p.from)} → <span class="yo-ok">${esc(p.to)}</span></span>`).join('') + 
-          (YO.length > 100 ? `<span class="yo-chip" style="background:transparent;border-color:var(--border)">... и еще ${YO.length - 100}</span>` : '');
-      } catch(e) {
-        l.innerHTML = `<span style="color:var(--error)">Ошибка загрузки: ${esc(e.message)}</span>`;
+    panel.innerHTML = `
+      <h3>Ёфикатор</h3>
+      <div class="sp-desc">Введите текст. Сначала проверяется локальный словарь, затем облачный (Supabase).</div>
+      <div class="field"><textarea id="yoText" placeholder="Вставьте текст…" style="min-height:120px"></textarea></div>
+      <button class="btn primary" id="yoRun">Ёфицировать</button>
+      <div class="typo-result" id="yoResult"></div>
+      
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+        <div class="sp-desc" style="margin-bottom:8px">Статус облачной базы:</div>
+        <div class="yo-list" id="yoList"><span style="color:var(--muted);font-size:13px">Загрузка...</span></div>
+      </div>
+    `;
+
+    // Встроенный базовый словарь (работает всегда)
+    const LOCAL_YO = {
+      "елка": "ёлка", "ежик": "ёжик", "еще": "ещё", "пошел": "пошёл", 
+      "пришел": "пришёл", "мед": "мёд", "черный": "чёрный", "желтый": "жёлтый",
+      "щелка": "щёлка", "печенка": "печёнка", "береза": "берёза", "актер": "актёр",
+      "аленка": "алёнка", "артем": "артём"
+    };
+
+    // Фоново грузим слова из Supabase
+    let cloudDict = {};
+    db.from('yoficator').select('from_word, to_word').then(({data, error}) => {
+      const listEl = document.getElementById('yoList');
+      if (error) {
+        if(listEl) listEl.innerHTML = `<span style="color:var(--error)">Ошибка: ${esc(error.message)}<br>Скорее всего в Supabase не настроен доступ (RLS).</span>`;
+        return;
       }
-    };
-    renderList();
+      if (data && data.length > 0) {
+        data.forEach(item => { 
+          if(item.from_word && item.to_word) cloudDict[item.from_word.toLowerCase().trim()] = item.to_word.toLowerCase().trim(); 
+        });
+        if(listEl) {
+           listEl.innerHTML = `<span style="color:var(--accent)">Успешно загружено слов из облака: ${data.length}</span>`;
+        }
+      } else {
+        if(listEl) listEl.innerHTML = `<span style="color:var(--muted)">В облаке пока нет слов.</span>`;
+      }
+    });
 
-    document.getElementById('yoAdd').onclick = async ()=>{
-      const f=document.getElementById('yoFrom').value.trim(), t=document.getElementById('yoTo').value.trim();
-      if(!f||!t) return; 
-      await db.from('yoficator').insert([{from_word: f, to_word: t}]);
-      
-      // Обновляем кэш без повторной загрузки всей базы
-      if (yoMapCache) yoMapCache.set(f.toLowerCase(), t.toLowerCase());
-      YO.push({from: f, to: t});
-      
-      renderList();
-      document.getElementById('yoFrom').value=''; document.getElementById('yoTo').value='';
-      toast('Словарь', 'Слово добавлено');
-    };
-
-    document.getElementById('yoRun').onclick = async ()=>{
+    document.getElementById('yoRun').onclick = ()=>{
       const t = document.getElementById('yoText').value;
       if(!t) return;
       const resultEl = document.getElementById('yoResult');
-      resultEl.innerHTML = `<div style="color:var(--muted)">Загрузка словаря из базы...</div>`;
       
       try {
-        const map = await getYoMap();
         const resultText = t.replace(/[а-яё]+/gi, (match) => {
           const lowerMatch = match.toLowerCase();
-          if (map.has(lowerMatch)) {
-            const replacement = map.get(lowerMatch);
-            // Сохраняем заглавную букву
+          
+          // Ищем сначала в локальном, потом в облачном
+          let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
+          
+          if (replacement) {
             if (match[0] === match[0].toUpperCase()) {
               return replacement.charAt(0).toUpperCase() + replacement.slice(1);
             }
@@ -586,6 +570,7 @@ function openService(id){
           }
           return match;
         });
+        
         resultEl.innerHTML = `<div class="ex good">${esc(resultText)}</div>`;
       } catch(e) {
         resultEl.innerHTML = `<div class="ex bad">Ошибка: ${esc(e.message)}</div>`;
