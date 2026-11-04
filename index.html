@@ -50,7 +50,7 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
 .btn{font-family:var(--font-ui);font-size:13px;font-weight:600;padding:9px 18px;border-radius:9px;cursor:pointer;border:1px solid var(--border-strong);background:var(--surface);color:var(--text);transition:all .2s}
 .btn:hover{background:var(--surface-hover);border-color:var(--accent)}
 .btn.primary{background:linear-gradient(135deg,rgba(94,234,212,0.18),rgba(124,255,178,0.12));border-color:rgba(94,234,212,0.4);color:var(--accent2)}
-.btn.small{padding:4px 8px;font-size:11px;}
+.btn.small{padding:4px 8px;font-size:11px; border-radius: 6px;}
 .empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px}
 .footer{text-align:center;color:var(--muted);font-size:12px;padding:30px 0 10px;font-family:var(--font-mono)}
 .footer .caret{display:inline-block;width:3px;height:12px;background:var(--accent);vertical-align:middle;animation:blink 1.1s steps(1) infinite}
@@ -95,10 +95,10 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .editor-actions{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-wrap:wrap}
 .results{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;max-height:640px;overflow-y:auto}
 .results h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px}
-.res-summary{font-size:13px;margin-bottom:12px;padding:9px 11px;border-radius:9px}
+.res-summary{font-size:13px;margin-bottom:12px;padding:9px 11px;border-radius:9px; animation: slideIn 0.3s ease-out;}
 .res-summary.ok{background:rgba(124,255,178,0.08);color:var(--ok);border:1px solid rgba(124,255,178,0.2)}
 .res-summary.err{background:rgba(255,92,138,0.08);color:var(--error);border:1px solid rgba(255,92,138,0.2)}
-.issue{padding:9px 11px;border-radius:9px;margin-bottom:7px;background:rgba(255,92,138,0.05);border-left:3px solid var(--error);font-size:13px;cursor:pointer}
+.issue{padding:9px 11px;border-radius:9px;margin-bottom:7px;background:rgba(255,92,138,0.05);border-left:3px solid var(--error);font-size:13px;cursor:pointer; animation: slideIn 0.3s ease-out backwards;}
 .issue:hover{background:rgba(255,92,138,0.09)}
 .issue .i-rule{color:var(--error);font-weight:600;font-size:11.5px;display:block;margin-bottom:2px;text-transform:uppercase;letter-spacing:.5px}
 .issue .i-detail{color:var(--muted);font-size:12.5px}
@@ -114,23 +114,24 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .opt.wrong .marker{border-color:var(--error);background:var(--error);color:#0B0E14}
 .opt.disabled{cursor:default;pointer-events:none;opacity:.85}
 .explain{margin-top:10px;padding:11px 13px;border-radius:9px;background:rgba(94,234,212,0.05);border:1px solid rgba(94,234,212,0.18);font-size:13px;color:var(--muted);display:none}
-.explain.show{display:block}
+.explain.show{display:block; animation: slideIn 0.3s ease-out;}
 .services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-bottom:24px}
-.service-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:8px;position:relative}
-.service-card:hover{background:var(--surface-hover);border-color:var(--border-strong)}
-.service-card .s-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,255,178,0.1));border:1px solid rgba(94,234,212,0.25);font-weight:700;color:var(--accent)}
+.service-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:8px;position:relative; transition: all 0.2s;}
+.service-card:hover{background:var(--surface-hover);border-color:var(--border-strong); transform: translateY(-2px);}
+.service-card .s-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,255,178,0.1));border:1px solid rgba(94,234,212,0.25);font-weight:700;color:var(--accent); transition: transform 0.3s;}
+.service-card:hover .s-icon { transform: scale(1.1) rotate(5deg); }
 .service-card .s-name{font-weight:600;font-size:14.5px}
 .service-card .s-desc{color:var(--muted);font-size:12.5px;line-height:1.5;flex:1}
 .service-card .s-badge{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);background:rgba(94,234,212,0.1);border:1px solid rgba(94,234,212,0.25);padding:2px 7px;border-radius:999px;align-self:flex-start}
-.service-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px;display:none}
+.service-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px;display:none; animation: slideIn 0.3s ease-out;}
 .service-panel.show{display:block}
 .service-panel h3{font-size:16px;margin-bottom:6px}
 .service-panel .sp-desc{color:var(--muted);font-size:13px;margin-bottom:16px}
 .yo-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:220px;overflow-y:auto}
 .typo-result{margin-top:14px}
-.space-item { margin-bottom: 10px; background: rgba(255, 209, 102, 0.08); border-left: 3px solid var(--warn); padding: 10px; border-radius: 9px; font-size: 13px;}
+.space-item { margin-bottom: 10px; background: rgba(255, 209, 102, 0.08); border-left: 3px solid var(--warn); padding: 10px; border-radius: 9px; font-size: 13px; animation: slideIn 0.3s ease-out backwards;}
 
-/* ИСПРАВЛЕННЫЙ РЕДАКТОР (без белого фона) */
+/* ИСПРАВЛЕННЫЙ РЕДАКТОР */
 .field { margin-bottom: 16px; }
 .editor-box {
   width: 100%;
@@ -166,22 +167,50 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 }
 .action-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
 
-/* Подсветки и кнопки в тексте */
-.hl-yo { background: rgba(124, 255, 178, 0.15); color: var(--ok); border-bottom: 2px solid var(--ok); border-radius: 3px; font-weight: bold; }
-.hl-typo { background: rgba(255, 92, 138, 0.15); border-bottom: 2px solid var(--error); border-radius: 3px; padding: 0 4px; position: relative; display: inline-flex; align-items: center; }
-.hl-grammar { background: rgba(94, 234, 212, 0.15); border-bottom: 2px solid var(--accent); border-radius: 3px; padding: 0 4px; position: relative; display: inline-flex; align-items: center; }
-.hl-space { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-bottom: 2px solid var(--warn); border-radius: 3px; }
+/* Подсветки */
+.hl-yo { background: rgba(124, 255, 178, 0.15); color: var(--ok); border-bottom: 2px solid var(--ok); border-radius: 3px; font-weight: bold; transition: background 0.3s;}
+.hl-typo { background: rgba(255, 92, 138, 0.15); border-bottom: 2px solid var(--error); border-radius: 3px; padding: 0 4px; position: relative; transition: background 0.3s;}
+.hl-grammar { background: rgba(94, 234, 212, 0.15); border-bottom: 2px solid var(--accent); border-radius: 3px; padding: 0 4px; position: relative; transition: background 0.3s;}
+.hl-space { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-bottom: 2px solid var(--warn); border-radius: 3px; transition: background 0.3s;}
 
-.inline-btn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; margin-left: 4px; border-radius: 4px;
-  font-size: 11px; font-weight: bold; cursor: pointer; border: none; outline: none;
-  transition: background 0.2s;
+/* Кнопки в списке замечаний */
+.issue-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 6px;
 }
-.btn-accept { background: rgba(124, 255, 178, 0.2); color: var(--ok); }
-.btn-accept:hover { background: rgba(124, 255, 178, 0.4); }
-.btn-reject { background: rgba(255, 92, 138, 0.2); color: var(--error); }
-.btn-reject:hover { background: rgba(255, 92, 138, 0.4); }
+
+/* АНИМАЦИИ */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Красивый анимированный таймер */
+.timer-box {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; padding: 20px; font-size: 15px; font-family: var(--font-ui);
+  color: var(--accent2); font-weight: 500; letter-spacing: 0.5px;
+  animation: pulseBg 2s infinite ease-in-out;
+  border-radius: 10px;
+}
+@keyframes pulseBg {
+  0%, 100% { background: rgba(124,255,178,0.02); }
+  50% { background: rgba(124,255,178,0.08); }
+}
+.timer-dots {
+  display: flex; gap: 4px; margin-left: 4px;
+}
+.timer-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: bounceDot 1.4s infinite ease-in-out both;
+}
+.timer-dots span:nth-child(1) { animation-delay: -0.32s; }
+.timer-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounceDot {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -314,16 +343,38 @@ function setupActions(textId, resultId) {
   }
 }
 
-function startTimer(container, label = 'Проверяю…') {
+// Красивый таймер с прыгающими точками
+function startTimer(container) {
+  const phrases = [
+    "Проверяю", 
+    "Ищу ошибочки", 
+    "Сверяю со словарём", 
+    "Анализирую текст", 
+    "Ещё чуть-чуть"
+  ];
+  let phraseIndex = 0;
+  
   container.innerHTML = `
-    <div class="empty" style="display:flex;align-items:center;justify-content:center;gap:10px">
-      <span>${esc(label)}</span>
-      <span class="timer-val" style="font-family:var(--font-mono);color:var(--accent)">0.0 с</span>
+    <div class="timer-box">
+      <span class="timer-text">${phrases[0]}</span>
+      <div class="timer-dots"><span></span><span></span><span></span></div>
     </div>`;
-  const el = container.querySelector('.timer-val');
+  
+  const textEl = container.querySelector('.timer-text');
   const t0 = performance.now();
-  const iv = setInterval(() => { el.textContent = ((performance.now() - t0) / 1000).toFixed(1) + ' с'; }, 100);
-  return { stop: () => { clearInterval(iv); return ((performance.now() - t0) / 1000); } };
+  
+  const iv = setInterval(() => {
+    phraseIndex++;
+    if (phraseIndex >= phrases.length) phraseIndex = phrases.length - 1;
+    textEl.textContent = phrases[phraseIndex];
+  }, 1500);
+
+  return { 
+    stop: () => { 
+      clearInterval(iv); 
+      return ((performance.now() - t0) / 1000); 
+    } 
+  };
 }
 
 async function yandexSpell(text) {
@@ -414,7 +465,7 @@ function runChecks(text){
 function renderResults(issues){
   if(!issues.length){ resultsEl.innerHTML = `<h3>Результат</h3><div class="res-summary ok">✓ Нарушений не найдено</div>`; return; }
   resultsEl.innerHTML = `<h3>Результат</h3><div class="res-summary err">✕ Замечаний: ${issues.length}</div>
-    ${issues.map(i=>`<div class="issue"><span class="i-rule">${esc(i.rule)}</span><span class="i-detail">${esc(i.detail)}</span></div>`).join('')}`;
+    ${issues.map((i, idx)=>`<div class="issue" style="animation-delay: ${idx * 0.05}s"><span class="i-rule">${esc(i.rule)}</span><span class="i-detail">${esc(i.detail)}</span></div>`).join('')}`;
 }
 
 function runCheck(){ if(!inputEl.value.trim()) return; renderResults(runChecks(inputEl.value)); }
@@ -437,13 +488,15 @@ function openService(id){
   if(id==='yoficator') {
     panel.innerHTML = `
       <h3>Ёфикатор</h3>
-      <div class="sp-desc">Введите текст. Буквы «ё», которые были добавлены, подсветятся зеленым.</div>
+      <div class="sp-desc">Введите текст. Буквы «ё» будут подчеркнуты зеленым.</div>
       <div class="editor-box" id="yoText" contenteditable="true" placeholder="Вставьте текст…"></div>
       <div class="action-bar">
         <button class="btn primary" id="yoRun">Ёфицировать</button>
         <button class="btn" id="btnClear_yoText">Очистить</button>
         <button class="btn" id="btnCopy_yoText">Копировать текст</button>
       </div>
+      <div class="typo-result" id="yoStats" style="font-family:var(--font-mono); font-size:13px; color:var(--muted);"></div>
+      
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
         <div class="sp-desc" style="margin-bottom:8px">Статус облачной базы:</div>
         <div class="yo-list" id="yoList"><span style="color:var(--muted);font-size:13px">Загрузка...</span></div>
@@ -460,7 +513,7 @@ function openService(id){
 
     let cloudDict = {};
     const yoTextEl = document.getElementById('yoText');
-    setupActions('yoText', 'yoResult');
+    setupActions('yoText', 'yoStats');
 
     const loadFullCloudBase = async () => {
       const listEl = document.getElementById('yoList');
@@ -489,39 +542,43 @@ function openService(id){
       let originalText = yoTextEl.innerText;
       if(!originalText) return;
       
-      let resultText = originalText;
-      // Применяем замены
-      resultText = resultText.replace(/[а-яё]+/gi, (match) => {
+      let count = 0; 
+      
+      let resultText = originalText.replace(/[а-яё]+/gi, (match) => {
         const lowerMatch = match.toLowerCase();
         let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
         if (replacement) {
+          count++;
           if (match[0] === match[0].toUpperCase()) return replacement.charAt(0).toUpperCase() + replacement.slice(1);
           return replacement;
         }
         return match;
       });
 
-      // Подсветка только новых 'ё'
       let html = '';
-      let i = 0, j = 0;
-      while (i < originalText.length || j < resultText.length) {
-        if (i < originalText.length && j < resultText.length && originalText[i].toLowerCase() === resultText[j].toLowerCase()) {
-          html += esc(resultText[j]);
-          i++; j++;
-        } else if (j < resultText.length && (resultText[j] === 'ё' || resultText[j] === 'Ё')) {
-          // Найдена новая 'ё' (которой не было в оригинале)
-          html += `<span class="hl-yo">${esc(resultText[j])}</span>`;
-          j++;
+      for (let i = 0; i < resultText.length; i++) {
+        const char = resultText[i];
+        if (char === 'ё' || char === 'Ё') {
+          html += `<span class="hl-yo">${esc(char)}</span>`;
         } else {
-          // Просто копируем, если что-то не совпало (вдруг ошибка)
-          if (j < resultText.length) {
-             html += esc(resultText[j] === '\n' ? '<br>' : resultText[j]);
-             j++;
-          } else { i++; }
+          html += esc(char === '\n' ? '<br>' : char);
         }
       }
       
       yoTextEl.innerHTML = html;
+      
+      const totalYo = (resultText.match(/[ёЁ]/g) || []).length;
+      const wordsWithYo = (resultText.match(/[а-яё]*[ёЁ][а-яё]*/gi) || []).length;
+      
+      document.getElementById('yoStats').innerHTML = `
+        <div class="res-summary ok" style="display:inline-block; margin-bottom:8px;">
+          Заменено слов: <b>${count}</b>
+        </div>
+        <div style="margin-top:8px;">
+          Всего букв «ё» в тексте: <b>${totalYo}</b><br>
+          Слов с буквой «ё»: <b>${wordsWithYo}</b>
+        </div>
+      `;
     };
   }
   
@@ -550,9 +607,9 @@ function openService(id){
   if(id==='typos') {
     panel.innerHTML = `
       <h3>Опечатки</h3>
-      <div class="sp-desc">Нажмите на ✓ или ✕ возле ошибки, чтобы принять или отклонить правку.</div>
+      <div class="sp-desc">Ошибки подчеркиваются в тексте. Кнопки «Принять» и «Отклонить» доступны в списке замечаний.</div>
       <div class="editor-box" id="typoText" contenteditable="true" placeholder="Вставьте текст…"></div>
-      <div class="action-bar" id="typoTopBar">
+      <div class="action-bar">
         <button class="btn primary" id="typoRun">Проверить</button>
         <button class="btn" id="btnClear_typoText">Очистить</button>
         <button class="btn" id="btnCopy_typoText">Копировать текст</button>
@@ -573,65 +630,104 @@ function openService(id){
     setupActions('typoText', 'typoResult');
     let currentIssues = [];
 
-    // Функция перерисовки текста с учетом текущего состояния (принято/отклонено)
-    function renderTypoText() {
-      let t = typoTextEl.innerText;
+    function renderTypoList() {
+      const resultEl = document.getElementById('typoResult');
       if (currentIssues.length === 0) {
-        typoTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
+        resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`;
+        typoTextEl.innerHTML = esc(typoTextEl.innerText).replace(/\n/g, '<br>');
         return;
       }
+
+      let html = `
+        <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>✕ Замечаний: ${currentIssues.length}</span>
+          <div>
+            <button class="btn small" id="acceptAll">Принять все</button>
+            <button class="btn small" id="rejectAll">Отклонить все</button>
+          </div>
+        </div>
+      `;
+
+      const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
       
-      // Сортируем по убыванию позиции, чтобы замены не сбивали индексы
-      const sorted = [...currentIssues].filter(i => i.status !== 'rejected').sort((a,b) => b.start - a.start);
-      
-      let html = esc(t).replace(/\n/g, '<br>'); // Начинаем с чистого текста
-      
-      // Мы не можем просто заменить в HTML, поэтому пересобираем строку заново
-      // Это сложно, но надежно
-      let plainText = typoTextEl.innerText;
-      
-      // Если все отклонены - просто показываем текст
-      if (sorted.length === 0) {
-        typoTextEl.innerHTML = esc(plainText).replace(/\n/g, '<br>');
-        return;
-      }
-      
-      // Строим разметку с нуля на основе текущего текста
-      let resultHtml = '';
-      let lastIndex = 0;
-      
-      // Для отрисовки нам нужны исходные координаты в тексте, который сейчас в редакторе
-      // Но так как мы применяем замены, координаты могут съехать.
-      // Поэтому проще пересобрать текст с нуля, применив принятые замены.
-      
-      let textToRender = plainText;
-      
-      // Применяем ПРИНЯТЫЕ замены к тексту
-      const accepted = currentIssues.filter(i => i.status === 'accepted').sort((a,b) => b.start - a.start);
-      accepted.forEach(i => {
-        textToRender = textToRender.slice(0, i.start) + i.repl + textToRender.slice(i.end);
+      sortedForList.forEach((i, idx) => {
+        if (i.status === 'accepted') return; 
+        let border = 'var(--error)';
+        let bg = 'rgba(255,92,138,0.05)';
+        if (i.source === 'Грамматика') { border = 'var(--accent)'; bg = 'rgba(94,234,212,0.05)'; }
+        
+        let msgHtml = '';
+        if (i.msg) msgHtml = `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>`;
+
+        html += `
+          <div class="issue" style="border-left-color:${border}; background:${bg}; animation-delay: ${idx * 0.05}s">
+            <span class="i-rule" style="color:${border}">${esc(i.source)}</span>
+            <span class="i-detail">
+              <b style="color:var(--error)">${esc(i.word)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
+              ${msgHtml}
+            </span>
+            <div class="issue-actions">
+              <button class="btn small" style="background:rgba(124,255,178,0.2); color:var(--ok); border-color:rgba(124,255,178,0.4);" onclick="applyTypoFix(${currentIssues.indexOf(i)})">Принять</button>
+              <button class="btn small" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);" onclick="rejectTypoFix(${currentIssues.indexOf(i)})">Отклонить</button>
+            </div>
+          </div>`;
       });
 
-      // Теперь подсвечиваем те, что еще в статусе pending
+      resultEl.innerHTML = html;
+
+      let text = typoTextEl.innerText;
+      let highlightHtml = '';
+      let lastIndex = 0;
+      
       const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => a.start - b.start);
       
-      // Так как мы применили замены, индексы pending съехали. 
-      // Нам нужно пересчитать их позиции. 
-      // Простой способ: не применять замены визуально, а рисовать всё сразу.
-      
-      // На самом деле, проще всего при "Принять" - перезапускать проверку. 
-      // Но давайте попробуем хак: мы храним оригинальный текст.
-      
-      // Вернемся к простому варианту: мы просто отрисовываем pending подсветку поверх текста.
-      // Если пользователь нажимает "Принять", мы МЕНЯЕМ сам текст в редакторе (заменяем слово),
-      // и убираем эту ошибку из списка.
-      
-      // Отрисовка состояния PENDING
-      // Восстанавливаем исходный текст (до всех правок), но с учетом того, что уже принято
-      let baseText = typoTextEl.innerText; 
-      // ВАЖНО: если мы нажмем "Принять", мы изменим innerText. 
-      // Поэтому для корректной работы кнопок, мы будем хранить оригинальный текст в переменной.
+      pending.forEach(i => {
+        if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
+        const badText = text.slice(i.start, i.end) || i.word;
+        highlightHtml += `<span class="hl-typo" title="${esc(i.repl)}">${esc(badText)}</span>`;
+        lastIndex = i.end;
+      });
+      if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
+
+      typoTextEl.innerHTML = highlightHtml;
+
+      document.getElementById('acceptAll').onclick = () => {
+        let text = typoTextEl.innerText;
+        const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => b.start - a.start);
+        pending.forEach(issue => {
+          text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+          issue.status = 'accepted';
+        });
+        typoTextEl.innerText = text;
+        renderTypoList();
+      };
+
+      document.getElementById('rejectAll').onclick = () => {
+        currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+        renderTypoList();
+      };
     }
+
+    window.applyTypoFix = (idx) => {
+      const issue = currentIssues[idx];
+      issue.status = 'accepted';
+      let text = typoTextEl.innerText;
+      typoTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+      
+      const diff = issue.repl.length - (issue.end - issue.start);
+      currentIssues.forEach(other => {
+        if (other.status === 'pending' && other.start > issue.start) {
+          other.start += diff;
+          other.end += diff;
+        }
+      });
+      renderTypoList();
+    };
+
+    window.rejectTypoFix = (idx) => {
+      currentIssues[idx].status = 'rejected';
+      renderTypoList();
+    };
 
     document.getElementById('typoRun').onclick = async () => {
       const t = typoTextEl.innerText;
@@ -658,147 +754,31 @@ function openService(id){
         lt.matches.forEach(m => {
           const ctx = m.context || {};
           const word = (ctx.text || '').slice(ctx.offset, ctx.offset + ctx.length);
-          const repl = (m.replacements || []).slice(0, 1).map(r => r.value)[0] || '—'; // берем первый вариант
+          const repl = (m.replacements || []).slice(0, 1).map(r => r.value)[0] || '—';
           const absStart = ctx.offset || 0;
           all.push({ source: 'Грамматика', word: word || '…', repl, start: absStart, end: absStart + (ctx.length || 0), msg: m.message });
         });
       }
 
-      // Сортируем по убыванию, чтобы применять замены с конца
       all.sort((a,b) => b.start - a.start);
       
-      // Убираем дубликаты
       const seen = new Set();
       currentIssues = all.filter(i => {
         const key = (i.word || '').toLowerCase() + '|' + (i.repl || '').toLowerCase();
         if (seen.has(key)) return false;
         seen.add(key);
-        i.status = 'pending'; // pending, accepted, rejected
+        i.status = 'pending';
         return true;
       });
 
       renderTypoList();
     };
-
-    function renderTypoList() {
-      const resultEl = document.getElementById('typoResult');
-      if (currentIssues.length === 0) {
-        resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`;
-        typoTextEl.innerHTML = esc(typoTextEl.innerText).replace(/\n/g, '<br>');
-        return;
-      }
-
-      let html = `
-        <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>✕ Замечаний: ${currentIssues.length}</span>
-          <div>
-            <button class="btn small" id="acceptAll">Принять все</button>
-            <button class="btn small" id="rejectAll">Отклонить все</button>
-          </div>
-        </div>
-      `;
-
-      // Отрисовка списка (сортируем по порядку в тексте для списка)
-      const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
-      
-      sortedForList.forEach((i, idx) => {
-        if (i.status === 'accepted') return; // Не показываем принятые
-        let border = 'var(--error)';
-        let bg = 'rgba(255,92,138,0.05)';
-        if (i.source === 'Грамматика') { border = 'var(--accent)'; bg = 'rgba(94,234,212,0.05)'; }
-        
-        let msgHtml = '';
-        if (i.msg) msgHtml = `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>`;
-
-        html += `
-          <div class="issue" style="border-left-color:${border}; background:${bg}">
-            <span class="i-rule" style="color:${border}">${esc(i.source)}</span>
-            <span class="i-detail">
-              <b style="color:var(--error)">${esc(i.word)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
-              ${msgHtml}
-            </span>
-          </div>`;
-      });
-
-      resultEl.innerHTML = html;
-
-      // Отрисовка текста с подсветкой
-      let text = typoTextEl.innerText; // Берем текущий текст
-      let highlightHtml = '';
-      let lastIndex = 0;
-      
-      // Сортируем для отрисовки по возрастанию
-      const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => a.start - b.start);
-      
-      pending.forEach(i => {
-        if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
-        const badText = text.slice(i.start, i.end) || i.word;
-        
-        // Добавляем тултип (title) и кнопки внутри span
-        highlightHtml += `<span class="hl-typo" title="${esc(i.repl)}">${esc(badText)}<button class="inline-btn btn-accept" data-action="accept" data-idx="${currentIssues.indexOf(i)}">✓</button><button class="inline-btn btn-reject" data-action="reject" data-idx="${currentIssues.indexOf(i)}">✕</button></span>`;
-        lastIndex = i.end;
-      });
-      if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
-
-      typoTextEl.innerHTML = highlightHtml;
-
-      // Обработчики кнопок
-      document.querySelectorAll('.hl-typo .inline-btn').forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const action = btn.dataset.action;
-          const idx = +btn.dataset.idx;
-          const issue = currentIssues[idx];
-          
-          if (action === 'accept') {
-            issue.status = 'accepted';
-            // Применяем замену к тексту
-            let text = typoTextEl.innerText;
-            typoTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
-            // Пересчитываем индексы для оставшихся (так как текст изменился)
-            // Для простоты, просто перезапустим проверку (костыль, но надежно)
-            // В идеале, нужно сдвигать индексы.
-            // Я сделаю простой сдвиг:
-            const diff = issue.repl.length - (issue.end - issue.start);
-            currentIssues.forEach(other => {
-              if (other.status === 'pending' && other.start > issue.start) {
-                other.start += diff;
-                other.end += diff;
-              }
-            });
-          } else if (action === 'reject') {
-            issue.status = 'rejected';
-          }
-          renderTypoList();
-        };
-      });
-
-      // Кнопки Принять все / Отклонить все
-      const acceptAllBtn = document.getElementById('acceptAll');
-      if (acceptAllBtn) acceptAllBtn.onclick = () => {
-        // Применяем все pending с конца
-        let text = typoTextEl.innerText;
-        const pending = currentIssues.filter(i => i.status === 'pending').sort((a,b) => b.start - a.start);
-        pending.forEach(issue => {
-          text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
-          issue.status = 'accepted';
-        });
-        typoTextEl.innerText = text;
-        renderTypoList();
-      };
-
-      const rejectAllBtn = document.getElementById('rejectAll');
-      if (rejectAllBtn) rejectAllBtn.onclick = () => {
-        currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
-        renderTypoList();
-      };
-    }
   }
 
   if(id==='grammar') {
     panel.innerHTML = `
       <h3>Грамматика и пунктуация</h3>
-      <div class="sp-desc">Проверка пунктуации и согласования. Ошибки подсвечиваются в тексте.</div>
+      <div class="sp-desc">Ошибки подсвечиваются в тексте. Кнопки «Принять» и «Отклонить» доступны в списке замечаний.</div>
       <div class="editor-box" id="grammarText" contenteditable="true" placeholder="Вставьте текст…"></div>
       <div class="action-bar">
         <button class="btn primary" id="grammarRun">Проверить</button>
@@ -838,7 +818,7 @@ function openService(id){
         else if (i.issueType === 'style' || i.issueType === 'locale-violation') border = 'var(--accent)';
 
         html += `
-          <div class="issue" style="border-left-color:${border}">
+          <div class="issue" style="border-left-color:${border}; animation-delay: ${idx * 0.05}s">
             <span class="i-rule" style="color:${border}">${esc(i.category)}</span>
             <span class="i-detail">
               ${esc(i.msg)}
@@ -846,6 +826,10 @@ function openService(id){
                 <b style="color:var(--ok)">${esc(i.repl)}</b>
               </div>
             </span>
+            <div class="issue-actions">
+              <button class="btn small" style="background:rgba(124,255,178,0.2); color:var(--ok); border-color:rgba(124,255,178,0.4);" onclick="applyGrammarFix(${currentIssues.indexOf(i)})">Принять</button>
+              <button class="btn small" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);" onclick="rejectGrammarFix(${currentIssues.indexOf(i)})">Отклонить</button>
+            </div>
           </div>`;
       });
 
@@ -865,37 +849,12 @@ function openService(id){
         if (i.issueType === 'misspelling') border = 'var(--error)';
         else if (i.issueType === 'style') border = 'var(--warn)';
         
-        highlightHtml += `<span class="hl-grammar" style="border-bottom-color:${border};" title="${esc(i.msg)} → ${esc(i.repl)}">${esc(badText)}<button class="inline-btn btn-accept" data-action="accept" data-idx="${currentIssues.indexOf(i)}">✓</button><button class="inline-btn btn-reject" data-action="reject" data-idx="${currentIssues.indexOf(i)}">✕</button></span>`;
+        highlightHtml += `<span class="hl-grammar" style="border-bottom-color:${border};" title="${esc(i.msg)} → ${esc(i.repl)}">${esc(badText)}</span>`;
         lastIndex = i.end;
       });
       if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
 
       grammarTextEl.innerHTML = highlightHtml;
-
-      document.querySelectorAll('.hl-grammar .inline-btn').forEach(btn => {
-        btn.onclick = (e) => {
-          e.stopPropagation();
-          const action = btn.dataset.action;
-          const idx = +btn.dataset.idx;
-          const issue = currentIssues[idx];
-          
-          if (action === 'accept') {
-            issue.status = 'accepted';
-            let text = grammarTextEl.innerText;
-            grammarTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
-            const diff = issue.repl.length - (issue.end - issue.start);
-            currentIssues.forEach(other => {
-              if (other.status === 'pending' && other.start > issue.start) {
-                other.start += diff;
-                other.end += diff;
-              }
-            });
-          } else if (action === 'reject') {
-            issue.status = 'rejected';
-          }
-          renderGrammarText();
-        };
-      });
 
       const acceptAllBtn = document.getElementById('acceptAllG');
       if (acceptAllBtn) acceptAllBtn.onclick = () => {
@@ -915,6 +874,27 @@ function openService(id){
         renderGrammarText();
       };
     }
+
+    window.applyGrammarFix = (idx) => {
+      const issue = currentIssues[idx];
+      issue.status = 'accepted';
+      let text = grammarTextEl.innerText;
+      grammarTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+      
+      const diff = issue.repl.length - (issue.end - issue.start);
+      currentIssues.forEach(other => {
+        if (other.status === 'pending' && other.start > issue.start) {
+          other.start += diff;
+          other.end += diff;
+        }
+      });
+      renderGrammarText();
+    };
+
+    window.rejectGrammarFix = (idx) => {
+      currentIssues[idx].status = 'rejected';
+      renderGrammarText();
+    };
 
     document.getElementById('grammarRun').onclick = async () => {
       const t = grammarTextEl.innerText;
@@ -947,7 +927,7 @@ function openService(id){
         };
       });
 
-      currentIssues.sort((a,b) => b.start - a.start); // Сортируем для применения с конца
+      currentIssues.sort((a,b) => b.start - a.start); 
       renderGrammarText();
     };
   }
@@ -998,11 +978,11 @@ function openService(id){
 
       zones.sort((a,b) => a.start - b.start);
 
-      zones.forEach(z => {
+      zones.forEach((z, idx) => {
         count++;
-        if (z.type === 'multi') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Найдено ${z.text.length} пробелов подряд</b></div></div>`;
-        else if (z.type === 'start') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в начале строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
-        else if (z.type === 'end') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в конце строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
+        if (z.type === 'multi') resultHtml += `<div class="space-item" style="animation-delay: ${idx*0.05}s"><div style="color:var(--warn); margin-bottom:4px;"><b>Найдено ${z.text.length} пробелов подряд</b></div></div>`;
+        else if (z.type === 'start') resultHtml += `<div class="space-item" style="animation-delay: ${idx*0.05}s"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в начале строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
+        else if (z.type === 'end') resultHtml += `<div class="space-item" style="animation-delay: ${idx*0.05}s"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в конце строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
       });
 
       if (zones.length > 0) {
