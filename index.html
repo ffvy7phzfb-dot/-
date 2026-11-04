@@ -528,7 +528,6 @@ function openService(id){
       if(!originalText) return;
       
       let count = 0; 
-      
       let resultText = originalText.replace(/[а-яё]+/gi, (match) => {
         const lowerMatch = match.toLowerCase();
         let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
@@ -540,30 +539,36 @@ function openService(id){
         return match;
       });
 
+      // Сравниваем посимвольно оригинал и результат, чтобы понять, откуда взялась 'ё'
       let html = '';
-      for (let i = 0; i < resultText.length; i++) {
-        const char = resultText[i];
-        if (char === 'ё' || char === 'Ё') {
-          // Проверяем, была ли эта буква изначально в тексте
-          // Если в оригинале на этом месте была 'е', значит это НОВАЯ буква (красная)
-          // Если в оригинале уже была 'ё', значит она старая (зеленая)
-          
-          // Для простоты мы считаем: если слово заменилось, то это новая 'ё'
-          // Но чтобы точно знать, нужно смотреть на оригинал.
-          // Упростим: если буква 'ё' есть в оригинальном тексте (хотя бы где-то), красим зелёным, иначе красным.
-          // Но это не совсем точно. 
-          // Лучше просто все 'ё' красить: новые - красным, старые - зеленым.
-          // В нашем случае, если мы нашли слово в словаре, мы заменили 'е' на 'ё'.
-          // Значит все 'ё' в результате - это либо те, что были, либо новые.
-          
-          // Чтобы не переусложнять, давайте просто красить все 'ё' красным.
-          // Пользователь просил: "красным подсвечиваются буквы ё, которые заменены с е. А зелёным те, которые уже были в тексте".
-          
-          // В текущей реализации мы не храним карту замен. 
-          // Давайте покрасим все 'ё' красным, как вы просили ранее, чтобы избежать ошибок.
-          html += `<span class="hl-yo-new">${esc(char)}</span>`;
+      let i = 0, j = 0;
+      
+      while (i < originalText.length || j < resultText.length) {
+        let charOrig = i < originalText.length ? originalText[i] : null;
+        let charRes = j < resultText.length ? resultText[j] : null;
+
+        if (charOrig === charRes) {
+          // Символы совпадают
+          if (charRes === 'ё' || charRes === 'Ё') {
+            html += `<span class="hl-yo-old">${esc(charRes)}</span>`;
+          } else if (charRes === '\n') {
+            html += '<br>';
+          } else {
+            html += esc(charRes);
+          }
+          i++; j++;
+        } else if (charRes === 'ё' || charRes === 'Ё') {
+          // В результате 'ё', а в оригинале что-то другое (значит, заменили)
+          html += `<span class="hl-yo-new">${esc(charRes)}</span>`;
+          j++;
+        } else if (charOrig === 'е' || charOrig === 'Е') {
+          // В оригинале 'е', а в результате не 'ё' (маловероятно при заменах, но возможно при ошибках)
+          i++;
         } else {
-          html += esc(char === '\n' ? '<br>' : char);
+          // Если что-то не совпало, просто берем результат
+          if (charRes === '\n') html += '<br>';
+          else html += esc(charRes);
+          i++; j++;
         }
       }
       
