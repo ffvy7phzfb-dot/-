@@ -128,74 +128,41 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .yo-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:220px;overflow-y:auto}
 .typo-result{margin-top:14px}
 .space-item { margin-bottom: 10px; background: rgba(255, 209, 102, 0.08); border-left: 3px solid var(--warn); padding: 10px; border-radius: 9px; font-size: 13px;}
-.space-highlight { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-radius: 3px; font-weight: bold;}
 
-/* ИСПРАВЛЕННЫЕ БОЛЬШИЕ ТЕМНЫЕ ПОЛЯ ВВОДА */
-.field { margin-bottom: 16px; }
-.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.field textarea { 
-  width: 100%; 
-  min-height: 200px;
-  background: var(--input-bg); 
-  border: 1px solid var(--border-strong); 
-  border-radius: 10px; 
-  padding: 16px; 
-  color: var(--text); 
-  font-family: var(--font-mono); 
-  font-size: 14px; 
-  line-height: 1.6;
-  outline: none; 
-  resize: vertical; 
-  transition: border-color .2s;
-}
-.field textarea:focus { border-color: var(--accent); }
-.field textarea::placeholder { color: var(--muted); opacity: .5; }
-
-/* --- МАГИЯ ДЛЯ ПОДСВЕТКИ В ТЕКСТЕ --- */
-.highlight-container {
-  position: relative;
+/* СТИЛИ ДЛЯ РЕДАКТОРА С ПОДСВЕТКОЙ */
+.editor-box {
   width: 100%;
   min-height: 200px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--input-bg);
   border: 1px solid var(--border-strong);
   border-radius: 10px;
-  background: var(--input-bg);
-  overflow: hidden;
-}
-.highlight-container:focus-within {
-  border-color: var(--accent);
-}
-.highlight-backdrop,
-.highlight-input {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
   padding: 16px;
+  color: var(--text);
   font-family: var(--font-mono);
   font-size: 14px;
   line-height: 1.6;
+  outline: none;
   white-space: pre-wrap;
   word-wrap: break-word;
-  overflow-y: auto;
-  border: none;
-  outline: none;
-  background: transparent;
+  transition: border-color .2s;
+  margin-bottom: 16px;
 }
-.highlight-backdrop {
-  color: var(--text);
-  pointer-events: none;
-  z-index: 1;
+.editor-box:focus {
+  border-color: var(--accent);
 }
-.highlight-input {
-  color: transparent;
-  caret-color: var(--text);
-  resize: none;
-  z-index: 2;
-}
-.highlight-input::placeholder {
+.editor-box:empty:before {
+  content: attr(placeholder);
   color: var(--muted);
-  opacity: .5;
+  opacity: 0.5;
+  pointer-events: none;
+  display: block;
 }
-.hl-warn { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-radius: 3px; padding: 0 2px; font-weight: bold;}
-.hl-error { background: rgba(255, 92, 138, 0.25); color: var(--error); border-radius: 3px; padding: 0 2px; font-weight: bold;}
+/* Подсветки */
+.hl-yo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
+.hl-typo { background: rgba(255, 92, 138, 0.2); color: var(--error); border-bottom: 2px solid var(--error); border-radius: 3px; font-weight: bold; }
+.hl-space { background: rgba(255, 209, 102, 0.3); color: var(--warn); border-bottom: 2px solid var(--warn); border-radius: 3px; }
 </style>
 </head>
 <body data-theme="dark">
@@ -292,11 +259,11 @@ const TESTS = [
 ];
 
 const SERVICES = [
-  { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Общий для всех.", badge:"словарь" },
+  { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Подсвечивает поставленные буквы.", badge:"словарь" },
   { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"стиль" },
-  { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + фоновая проверка орфографии.", badge:"орфография" },
+  { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Подсвечивает ошибки.", badge:"орфография" },
   { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика. Фоновая проверка.", badge:"грамматика" },
-  { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные и тройные пробелы, а также пробелы в начале и конце строк.", badge:"форматирование" }
+  { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные пробелы и пробелы в начале/конце. Подсвечивает желтым.", badge:"форматирование" }
 ];
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
@@ -321,56 +288,32 @@ async function yandexSpell(text) {
   const url = 'https://speller.yandex.net/services/spellservice.json/checkText';
   const body = new URLSearchParams({ text, lang: 'ru', options: '4' });
   try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
-    });
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
-  } catch (e) {
-    console.error('Spell:', e);
-    return null;
-  }
+  } catch (e) { console.error('Spell:', e); return null; }
 }
 
 async function languageTool(text) {
   const url = 'https://api.languagetool.org/v2/check';
   const body = new URLSearchParams({ text, language: 'ru-RU' });
   try {
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString()
-    });
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await r.json();
-  } catch (e) {
-    console.error('Grammar:', e);
-    return null;
-  }
+  } catch (e) { console.error('Grammar:', e); return null; }
 }
 
 /* ============ ИНИЦИАЛИЗАЦИЯ ============ */
 async function init(){
   applyTheme('dark');
-  
   try {
     let { data: rules } = await db.from('rules').select('*');
-    if (!rules || rules.length === 0) {
-      RULES = DEFAULT_RULES;
-    } else {
-      RULES = rules.map(r => ({...r, desc: r.desc_text}));
-    }
-  } catch(e) {
-    console.error("Ошибка загрузки правил:", e);
-    RULES = DEFAULT_RULES;
-  }
+    if (!rules || rules.length === 0) { RULES = DEFAULT_RULES; } 
+    else { RULES = rules.map(r => ({...r, desc: r.desc_text})); }
+  } catch(e) { console.error("Ошибка загрузки правил:", e); RULES = DEFAULT_RULES; }
 
-  renderRules(); 
-  renderServices(); 
-  renderTests();
-  updateStatsBar();
+  renderRules(); renderServices(); renderTests(); updateStatsBar();
 }
 
 document.getElementById('themeBtn').onclick = ()=> applyTheme(document.body.dataset.theme==='dark'?'light':'dark');
@@ -398,10 +341,7 @@ function renderRules(){
     <div class="rule-group"><div class="group-title">${esc(g)}</div><div class="rules-grid">
     ${groups[g].map(r=>`
       <div class="rule-card" id="rule-${r.id}">
-        <div class="r-head">
-          <div class="r-title">${esc(r.title)}</div>
-          <div class="r-date">${esc(r.date||'')}</div>
-        </div>
+        <div class="r-head"><div class="r-title">${esc(r.title)}</div><div class="r-date">${esc(r.date||'')}</div></div>
         <div class="r-desc">${esc(r.desc)}</div>
         ${(r.bad||r.good)?`<div class="examples">${r.bad?`<div class="ex bad"><span class="ex-label">✕ так не надо</span>${esc(r.bad)}</div>`:''}${r.good?`<div class="ex good"><span class="ex-label">✓ так верно</span>${esc(r.good)}</div>`:''}</div>`:''}
       </div>`).join('')}
@@ -435,10 +375,7 @@ function renderResults(issues){
     ${issues.map(i=>`<div class="issue"><span class="i-rule">${esc(i.rule)}</span><span class="i-detail">${esc(i.detail)}</span></div>`).join('')}`;
 }
 
-function runCheck(){
-  if(!inputEl.value.trim()) return;
-  renderResults(runChecks(inputEl.value));
-}
+function runCheck(){ if(!inputEl.value.trim()) return; renderResults(runChecks(inputEl.value)); }
 
 inputEl.oninput = ()=>{ updateStatsBar(); if(document.getElementById('autoCheck').checked) setTimeout(runCheck, 600); };
 document.getElementById('checkBtn').onclick = runCheck;
@@ -458,15 +395,11 @@ function openService(id){
   if(id==='yoficator') {
     panel.innerHTML = `
       <h3>Ёфикатор</h3>
-      <div class="sp-desc">Введите текст. Сначала проверяется локальный словарь, затем облачный (Supabase).</div>
-      <div class="highlight-container" id="yoContainer">
-        <div class="highlight-backdrop" id="yoBackdrop"></div>
-        <textarea class="highlight-input" id="yoText" placeholder="Вставьте текст…"></textarea>
-      </div>
-      <div style="margin-top:16px;">
+      <div class="sp-desc">Введите текст. Буквы «ё» будут подсвечиваться красным.</div>
+      <div class="editor-box" id="yoText" contenteditable="true" placeholder="Вставьте текст…"></div>
+      <div style="margin-bottom:16px;">
         <button class="btn primary" id="yoRun">Ёфицировать</button>
       </div>
-      
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
         <div class="sp-desc" style="margin-bottom:8px">Статус облачной базы:</div>
         <div class="yo-list" id="yoList"><span style="color:var(--muted);font-size:13px">Загрузка...</span></div>
@@ -486,35 +419,20 @@ function openService(id){
     const loadFullCloudBase = async () => {
       const listEl = document.getElementById('yoList');
       if (listEl) listEl.innerHTML = `<span style="color:var(--accent)">Загрузка слов... Пожалуйста, подождите.</span>`;
-      
-      let allData = [];
-      let from = 0;
-      const step = 1000;
-      
+      let allData = []; let from = 0; const step = 1000;
       try {
         while (true) {
-          const { data, error } = await db
-            .from('yoficator')
-            .select('from_word, to_word')
-            .range(from, from + step - 1);
-            
+          const { data, error } = await db.from('yoficator').select('from_word, to_word').range(from, from + step - 1);
           if (error) throw error;
           if (!data || data.length === 0) break;
-          
           allData = allData.concat(data);
           if (data.length < step) break;
           from += step;
         }
-        
         allData.forEach(item => { 
-          if(item.from_word && item.to_word) {
-            cloudDict[item.from_word.toLowerCase().trim()] = item.to_word.toLowerCase().trim(); 
-          }
+          if(item.from_word && item.to_word) cloudDict[item.from_word.toLowerCase().trim()] = item.to_word.toLowerCase().trim(); 
         });
-        
-        if (listEl) {
-          listEl.innerHTML = `<span style="color:var(--accent)">Успешно загружено слов из облака: ${allData.length}</span>`;
-        }
+        if (listEl) listEl.innerHTML = `<span style="color:var(--accent)">Успешно загружено слов из облака: ${allData.length}</span>`;
       } catch(err) {
         if (listEl) listEl.innerHTML = `<span style="color:var(--error)">Ошибка: ${esc(err.message)}</span>`;
       }
@@ -523,59 +441,40 @@ function openService(id){
     loadFullCloudBase();
 
     const yoTextEl = document.getElementById('yoText');
-    const yoBackdropEl = document.getElementById('yoBackdrop');
-
-    // Синхронизация прокрутки и ввода (подсветка)
-    yoTextEl.addEventListener('input', () => {
-      yoBackdropEl.scrollTop = yoTextEl.scrollTop;
-      yoBackdropEl.scrollLeft = yoTextEl.scrollLeft;
-    });
-    yoTextEl.addEventListener('scroll', () => {
-      yoBackdropEl.scrollTop = yoTextEl.scrollTop;
-      yoBackdropEl.scrollLeft = yoTextEl.scrollLeft;
-    });
-
+    
     document.getElementById('yoRun').onclick = ()=>{
-      const t = yoTextEl.value;
+      let t = yoTextEl.innerText;
       if(!t) return;
       
-      try {
-        let resultText = t.replace(/[а-яё]+/gi, (match) => {
-          const lowerMatch = match.toLowerCase();
-          let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
-          if (replacement) {
-            if (match[0] === match[0].toUpperCase()) {
-              return replacement.charAt(0).toUpperCase() + replacement.slice(1);
-            }
-            return replacement;
+      let resultText = t.replace(/[а-яё]+/gi, (match) => {
+        const lowerMatch = match.toLowerCase();
+        let replacement = LOCAL_YO[lowerMatch] || cloudDict[lowerMatch];
+        if (replacement) {
+          if (match[0] === match[0].toUpperCase()) {
+            return replacement.charAt(0).toUpperCase() + replacement.slice(1);
           }
-          return match;
-        });
-
-        // Создаем разметку для подсветки
-        let html = '';
-        let inYo = false;
-        for (let i = 0; i < resultText.length; i++) {
-          const char = resultText[i];
-          if (char === 'ё' || char === 'Ё') {
-            if (!inYo) { html += '<span class="hl-error">'; inYo = true; }
-            html += esc(char);
-          } else {
-            if (inYo) { html += '</span>'; inYo = false; }
-            html += esc(char);
-          }
+          return replacement;
         }
-        if (inYo) html += '</span>';
+        return match;
+      });
 
-        // Добавляем пробел в конце для правильного переноса последней строки
-        html += '\n';
-
-        yoBackdropEl.innerHTML = html;
-        yoBackdropEl.scrollTop = yoTextEl.scrollTop;
-        yoBackdropEl.scrollLeft = yoTextEl.scrollLeft;
-      } catch(e) {
-        alert("Ошибка: " + e.message);
+      // Подсветка букв ё
+      let html = '';
+      let inYo = false;
+      for (let i = 0; i < resultText.length; i++) {
+        const char = resultText[i];
+        if (char === 'ё' || char === 'Ё') {
+          if (!inYo) { html += '<span class="hl-yo">'; inYo = true; }
+          html += esc(char);
+        } else {
+          if (inYo) { html += '</span>'; inYo = false; }
+          if (char === '\n') { html += '<br>'; }
+          else { html += esc(char); }
+        }
       }
+      if (inYo) html += '</span>';
+
+      yoTextEl.innerHTML = html;
     };
   }
   
@@ -591,12 +490,9 @@ function openService(id){
   if(id==='typos') {
     panel.innerHTML = `
       <h3>Опечатки</h3>
-      <div class="sp-desc">Сначала локальный словарь, затем фоновая проверка орфографии.</div>
-      <div class="highlight-container" id="typoContainer">
-        <div class="highlight-backdrop" id="typoBackdrop"></div>
-        <textarea class="highlight-input" id="typoText" placeholder="Вставьте текст…"></textarea>
-      </div>
-      <div style="margin-top:16px; margin-bottom:16px;">
+      <div class="sp-desc">Сначала локальный словарь, затем фоновая проверка орфографии. Ошибки подсвечиваются прямо в тексте.</div>
+      <div class="editor-box" id="typoText" contenteditable="true" placeholder="Вставьте текст…"></div>
+      <div style="margin-bottom:16px;">
         <button class="btn primary" id="typoRun">Проверить</button>
       </div>
       <div class="typo-result" id="typoResult"></div>
@@ -612,24 +508,13 @@ function openService(id){
     };
 
     const typoTextEl = document.getElementById('typoText');
-    const typoBackdropEl = document.getElementById('typoBackdrop');
-
-    typoTextEl.addEventListener('input', () => {
-      typoBackdropEl.scrollTop = typoTextEl.scrollTop;
-      typoBackdropEl.scrollLeft = typoTextEl.scrollLeft;
-    });
-    typoTextEl.addEventListener('scroll', () => {
-      typoBackdropEl.scrollTop = typoTextEl.scrollTop;
-      typoBackdropEl.scrollLeft = typoTextEl.scrollLeft;
-    });
 
     document.getElementById('typoRun').onclick = async () => {
-      const t = typoTextEl.value;
+      const t = typoTextEl.innerText;
       const resultEl = document.getElementById('typoResult');
-      if (!t.trim()) { typoBackdropEl.innerHTML = ''; resultEl.innerHTML = ''; return; }
+      if (!t.trim()) { typoTextEl.innerHTML = ''; resultEl.innerHTML = ''; return; }
 
       const timer = startTimer(resultEl);
-
       const localIssues = [];
       const localRe = /[а-яё]+/gi;
       let m;
@@ -640,30 +525,15 @@ function openService(id){
         }
       }
 
-      const [yandex, lt] = await Promise.all([
-        yandexSpell(t),
-        languageTool(t)
-      ]);
-
+      const [yandex, lt] = await Promise.all([yandexSpell(t), languageTool(t)]);
       timer.stop();
 
       const all = [];
 
-      localIssues.forEach(i => all.push({
-        source: 'Словарь', type: 'опечатка',
-        word: i.word, repl: i.replacement,
-        start: i.pos, end: i.pos + i.word.length
-      }));
+      localIssues.forEach(i => all.push({ source: 'Словарь', word: i.word, repl: i.replacement, start: i.pos, end: i.pos + i.word.length }));
 
       if (Array.isArray(yandex)) {
-        yandex.forEach(e => {
-          const variants = (e.s && e.s.length) ? e.s.join(', ') : '—';
-          all.push({
-            source: 'Орфография', type: 'опечатка',
-            word: e.word, repl: variants,
-            start: e.pos, end: e.pos + e.word.length
-          });
-        });
+        yandex.forEach(e => all.push({ source: 'Орфография', word: e.word, repl: (e.s && e.s.length) ? e.s.join(', ') : '—', start: e.pos, end: e.pos + e.word.length }));
       }
 
       if (lt && Array.isArray(lt.matches)) {
@@ -672,11 +542,7 @@ function openService(id){
           const word = (ctx.text || '').slice(ctx.offset, ctx.offset + ctx.length);
           const repl = (m.replacements || []).slice(0, 3).map(r => r.value).join(' / ') || '—';
           const absStart = ctx.offset || 0;
-          all.push({
-            source: 'Грамматика', type: m.rule?.issueType || 'грамматика',
-            word: word || '…', repl,
-            start: absStart, end: absStart + (ctx.length || 0)
-          });
+          all.push({ source: 'Грамматика', word: word || '…', repl, start: absStart, end: absStart + (ctx.length || 0) });
         });
       }
 
@@ -689,47 +555,35 @@ function openService(id){
       });
 
       if (uniq.length === 0) {
-        if (!yandex && !lt) {
-           resultEl.innerHTML = `<div class="ex bad">Внешние сервисы недоступны. Локальный словарь ничего не нашел.</div>`;
-           typoBackdropEl.innerHTML = esc(t) + '\n';
-           return;
-        }
-        resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`;
-        typoBackdropEl.innerHTML = esc(t) + '\n';
+        if (!yandex && !lt) { resultEl.innerHTML = `<div class="ex bad">Внешние сервисы недоступны.</div>`; } 
+        else { resultEl.innerHTML = `<div class="res-summary ok">✓ Ни опечаток, ни ошибок не найдено</div>`; }
+        typoTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
         return;
       }
 
       let htmlList = `<div class="res-summary err">✕ Замечаний: ${uniq.length}</div>`;
-      
-      // Сортировка по позиции для правильной отрисовки
       uniq.sort((a,b) => a.start - b.start);
 
-      // Формируем текст с подсветкой
       let lastIndex = 0;
       let highlightHtml = '';
       
       uniq.forEach(i => {
-        if (i.start > lastIndex) {
-          highlightHtml += esc(t.slice(lastIndex, i.start));
-        }
+        if (i.start > lastIndex) highlightHtml += esc(t.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
         const badText = t.slice(i.start, i.end) || i.word;
-        const border = i.source === 'Грамматика' ? 'var(--accent)' : 'var(--error)';
-        highlightHtml += `<span class="hl-error" style="background:rgba(255,92,138,0.15); border-bottom:2px solid ${border};" title="${esc(i.repl)}">${esc(badText)}</span>`;
+        highlightHtml += `<span class="hl-typo" title="${esc(i.repl)}">${esc(badText)}</span>`;
         lastIndex = i.end;
         
         htmlList += `
-          <div class="issue" style="cursor:default;border-left-color:${border}">
-            <span class="i-rule" style="color:${border}">${esc(i.source)} · ${esc(i.type)}</span>
+          <div class="issue" style="cursor:default;border-left-color:var(--error)">
+            <span class="i-rule">${esc(i.source)}</span>
             <span class="i-detail">
               <b style="color:var(--error)">${esc(badText)}</b> → <b style="color:var(--ok)">${esc(i.repl)}</b>
             </span>
           </div>`;
       });
-      if (lastIndex < t.length) {
-        highlightHtml += esc(t.slice(lastIndex));
-      }
+      if (lastIndex < t.length) highlightHtml += esc(t.slice(lastIndex)).replace(/\n/g, '<br>');
 
-      typoBackdropEl.innerHTML = highlightHtml + '\n';
+      typoTextEl.innerHTML = highlightHtml;
       resultEl.innerHTML = htmlList;
     };
   }
@@ -752,33 +606,23 @@ function openService(id){
       const data = await languageTool(t);
       timer.stop();
 
-      if (!data || !Array.isArray(data.matches)) {
-        resultEl.innerHTML = `<div class="ex bad">Сервис недоступен. Попробуйте позже.</div>`;
-        return;
-      }
+      if (!data || !Array.isArray(data.matches)) { resultEl.innerHTML = `<div class="ex bad">Сервис недоступен. Попробуйте позже.</div>`; return; }
 
       const matches = data.matches;
-      if (matches.length === 0) {
-        resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ошибок не найдено</div>`;
-        return;
-      }
+      if (matches.length === 0) { resultEl.innerHTML = `<div class="res-summary ok" style="margin-top:12px">✓ Ошибок не найдено</div>`; return; }
 
       let html = `<div class="res-summary err" style="margin-top:12px">✕ Найдено замечаний: ${matches.length}</div>`;
-
       matches.forEach((m) => {
         const category = m.rule?.category?.name || m.rule?.issueType || 'Замечание';
         const message = m.message || '';
         const context = m.context?.text || '';
         const offset = m.context?.offset || 0;
         const length = m.context?.length || 0;
-
         const before = context.slice(0, offset);
         const bad = context.slice(offset, offset + length);
         const after = context.slice(offset + length);
-
         const replacements = (m.replacements || []).slice(0, 5).map(r => r.value);
         const replText = replacements.length ? replacements.join(' / ') : '—';
-
         const issueType = (m.rule?.issueType || '').toLowerCase();
         let borderColor = 'var(--warn)';
         if (issueType === 'misspelling') borderColor = 'var(--error)';
@@ -792,13 +636,10 @@ function openService(id){
               <div style="margin-top:6px;font-family:var(--font-mono);font-size:12px;color:var(--muted)">
                 ${esc(before)}<u style="color:${borderColor}">${esc(bad)}</u>${esc(after)}
               </div>
-              <div style="margin-top:4px;font-size:12px">
-                Замена: <b style="color:var(--ok)">${esc(replText)}</b>
-              </div>
+              <div style="margin-top:4px;font-size:12px">Замена: <b style="color:var(--ok)">${esc(replText)}</b></div>
             </span>
           </div>`;
       });
-
       resultEl.innerHTML = html;
     };
   }
@@ -806,12 +647,9 @@ function openService(id){
   if(id==='spaces') {
     panel.innerHTML = `
       <h3>Лишние пробелы</h3>
-      <div class="sp-desc">Находит двойные и более пробелы, а также пробелы в начале и конце строк. Подсвечивает их желтым.</div>
-      <div class="highlight-container" id="spaceContainer">
-        <div class="highlight-backdrop" id="spaceBackdrop"></div>
-        <textarea class="highlight-input" id="spaceInput" placeholder="Вставьте текст для проверки пробелов…"></textarea>
-      </div>
-      <div style="display:flex; gap:8px; margin-top:16px; margin-bottom:16px; flex-wrap:wrap;">
+      <div class="sp-desc">Двойные, тройные пробелы и пробелы в начале/конце строк. Подсвечиваются желтым.</div>
+      <div class="editor-box" id="spaceText" contenteditable="true" placeholder="Вставьте текст для проверки пробелов…"></div>
+      <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
         <button class="btn primary" id="spaceRun">Проверить</button>
         <button class="btn" id="spaceClear">Очистить лишние</button>
         <button class="btn" id="spaceCopy">Копировать текст</button>
@@ -819,36 +657,23 @@ function openService(id){
       <div class="typo-result" id="spaceResult"></div>
     `;
 
-    const spaceTextEl = document.getElementById('spaceInput');
-    const spaceBackdropEl = document.getElementById('spaceBackdrop');
+    const spaceTextEl = document.getElementById('spaceText');
     const spaceResultEl = document.getElementById('spaceResult');
-
-    spaceTextEl.addEventListener('input', () => {
-      spaceBackdropEl.scrollTop = spaceTextEl.scrollTop;
-      spaceBackdropEl.scrollLeft = spaceTextEl.scrollLeft;
-    });
-    spaceTextEl.addEventListener('scroll', () => {
-      spaceBackdropEl.scrollTop = spaceTextEl.scrollTop;
-      spaceBackdropEl.scrollLeft = spaceTextEl.scrollLeft;
-    });
 
     function renderSpaces(text) {
       let count = 0;
       let resultHtml = '';
       let highlightHtml = '';
       
-      // Ищем двойные и более пробелы
       const multiSpaces = / {2,}/g;
       let match;
       let lastIndex = 0;
-      
-      // Сначала соберем все проблемные зоны для списка
       const zones = [];
+      
       while ((match = multiSpaces.exec(text)) !== null) {
         zones.push({ start: match.index, end: match.index + match[0].length, type: 'multi', text: match[0] });
       }
       
-      // Пробелы в начале/конце строк
       const lines = text.split('\n');
       let currentPos = 0;
       lines.forEach((line, i) => {
@@ -863,74 +688,48 @@ function openService(id){
         currentPos += line.length + 1;
       });
 
-      // Сортируем зоны по началу
       zones.sort((a,b) => a.start - b.start);
 
-      // Формируем список и подсветку
       zones.forEach(z => {
         count++;
-        if (z.type === 'multi') {
-          resultHtml += `
-            <div class="space-item">
-              <div style="color:var(--warn); margin-bottom:4px;"><b>Найдено ${z.text.length} пробелов подряд</b></div>
-            </div>`;
-        } else if (z.type === 'start') {
-          resultHtml += `
-            <div class="space-item">
-              <div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в начале строки ${z.line} (${z.text.length} шт.)</b></div>
-            </div>`;
-        } else if (z.type === 'end') {
-          resultHtml += `
-            <div class="space-item">
-              <div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в конце строки ${z.line} (${z.text.length} шт.)</b></div>
-            </div>`;
-        }
+        if (z.type === 'multi') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Найдено ${z.text.length} пробелов подряд</b></div></div>`;
+        else if (z.type === 'start') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в начале строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
+        else if (z.type === 'end') resultHtml += `<div class="space-item"><div style="color:var(--warn); margin-bottom:4px;"><b>Пробелы в конце строки ${z.line} (${z.text.length} шт.)</b></div></div>`;
       });
 
-      // Формируем HTML для подсветки
       if (zones.length > 0) {
         zones.forEach(z => {
-          if (z.start > lastIndex) {
-            highlightHtml += esc(text.slice(lastIndex, z.start));
-          }
-          highlightHtml += `<span class="hl-warn">${esc(text.slice(z.start, z.end))}</span>`;
+          if (z.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, z.start)).replace(/\n/g, '<br>');
+          highlightHtml += `<span class="hl-space">${esc(text.slice(z.start, z.end))}</span>`;
           lastIndex = z.end;
         });
-        if (lastIndex < text.length) {
-          highlightHtml += esc(text.slice(lastIndex));
-        }
+        if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
       } else {
-        highlightHtml = esc(text);
+        highlightHtml = esc(text).replace(/\n/g, '<br>');
       }
 
-      spaceBackdropEl.innerHTML = highlightHtml + '\n';
-
-      if (count === 0) {
-        spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Лишних пробелов не найдено</div>`;
-      } else {
-        spaceResultEl.innerHTML = `<div class="res-summary err" style="background:rgba(255,209,102,0.08); color:var(--warn); border-color:rgba(255,209,102,0.2)">✕ Найдено проблем с пробелами: ${count}</div>` + resultHtml;
-      }
+      spaceTextEl.innerHTML = highlightHtml;
+      if (count === 0) spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Лишних пробелов не найдено</div>`;
+      else spaceResultEl.innerHTML = `<div class="res-summary err" style="background:rgba(255,209,102,0.08); color:var(--warn); border-color:rgba(255,209,102,0.2)">✕ Найдено проблем с пробелами: ${count}</div>` + resultHtml;
     }
 
     document.getElementById('spaceRun').onclick = () => {
-      const t = spaceTextEl.value;
+      const t = spaceTextEl.innerText;
       if (!t) return;
       renderSpaces(t);
     };
 
     document.getElementById('spaceClear').onclick = () => {
-      let t = spaceTextEl.value;
+      let t = spaceTextEl.innerText;
       t = t.replace(/ {2,}/g, ' ');
       t = t.split('\n').map(line => line.trim()).join('\n');
       t = t.trim();
-      
-      spaceTextEl.value = t;
+      spaceTextEl.innerHTML = esc(t).replace(/\n/g, '<br>');
       spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Все лишние пробелы удалены</div>`;
-      spaceBackdropEl.innerHTML = esc(t) + '\n';
     };
 
     document.getElementById('spaceCopy').onclick = () => {
-      const t = spaceTextEl.value;
+      const t = spaceTextEl.innerText;
       if (!t) return;
       navigator.clipboard.writeText(t).then(() => {
         const originalText = document.getElementById('spaceCopy').textContent;
