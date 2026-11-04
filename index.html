@@ -158,11 +158,13 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
 .typo-result{margin-top:14px}
 .admin-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
 .admin-row input{flex:1;min-width:120px;background:var(--input-bg);border:1px solid var(--border);border-radius:8px;padding:8px 11px;color:var(--text);font-size:13px;outline:none}
-.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-.team-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px;position:relative}
 .team-card .tc-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#0B0E14;background:linear-gradient(135deg,var(--accent),var(--accent2))}
 .team-card .tc-name{font-weight:600;font-size:13.5px}
 .team-card .tc-meta{font-size:11.5px;color:var(--muted)}
+.status-dot{position:absolute;top:14px;right:14px;width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.status-dot.online{background:var(--ok);box-shadow:0 0 6px var(--ok)}
 .chat-layout{display:grid;grid-template-columns:260px 1fr;gap:14px;min-height:400px}
 .chat-list{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px;overflow-y:auto}
 .chat-item{padding:10px;border-radius:9px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:8px}
@@ -283,6 +285,10 @@ textarea#input::placeholder{color:var(--muted);opacity:.6}
   <section class="tab-panel" id="tab-team">
     <h2 class="section-title">Редакция</h2>
     <p class="section-desc">Коллеги и чаты. Сообщения сохраняются в облаке.</p>
+    
+    <h3 style="font-size:14px; text-transform:uppercase; color:var(--muted); margin-bottom:10px;">Команда онлайн</h3>
+    <div class="team-grid" id="teamGrid"></div>
+    
     <div class="toolbar">
       <button class="btn primary" id="newChatBtn">Новый чат</button>
     </div>
@@ -338,6 +344,7 @@ let USER = null;
 let CHATS = [];
 let MSGS = {};
 let activeChat = 'general';
+let teamInterval = null;
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
 function esc(s){ return String(s || '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -351,6 +358,54 @@ function toast(title, text, ms){
   if(ms) setTimeout(()=> t.remove(), ms);
 }
 
+// Форматирование времени для "был в сети"
+function formatLastSeen(isoString) {
+  if (!isoString) return 'давно';
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMins = Math.floor((now - date) / 60000);
+  
+  if (diffMins < 2) return '<span style="color:var(--ok)">В сети</span>';
+  if (diffMins < 60) return `${diffMins} мин. назад`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours} ч. назад`;
+  return `${Math.floor(diffHours / 24)} дн. назад`;
+}
+
+// Пинг активности пользователя
+async function pingActivity() {
+  if (!USER) return;
+  await db.from('profiles').update({ last_seen: new Date().toISOString() }).eq('id', USER.id);
+}
+
+// Обновление списка команды
+async function loadTeam() {
+  try {
+    const { data, error } = await db.from('profiles').select('*').order('last_seen', { ascending: false }).limit(50);
+    const grid = document.getElementById('teamGrid'); if(!grid) return;
+    
+    if (error || !data) {
+      grid.innerHTML = `<div class="empty">Не удалось загрузить команду. Проверьте RLS в таблице profiles.</div>`;
+      return;
+    }
+
+    grid.innerHTML = data.map(u => {
+      const isOnline = u.last_seen && (new Date() - new Date(u.last_seen)) < 120000; // 2 минуты
+      return `
+      <div class="team-card">
+        <div class="status-dot ${isOnline ? 'online' : ''}" title="${isOnline ? 'В сети' : 'Не в сети'}"></div>
+        <div class="tc-avatar">${esc((u.name||'?').charAt(0).toUpperCase())}</div>
+        <div>
+          <div class="tc-name">${esc(u.name)} ${esc(u.surname)}</div>
+          <div class="tc-meta">${u.role === 'admin' ? 'Админ' : 'Зритель'} • ${formatLastSeen(u.last_seen)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    console.error("Team load error", e);
+  }
+}
+
 // Загрузка данных из облака
 async function loadAllData() {
   try {
@@ -362,7 +417,6 @@ async function loadAllData() {
       RULES = rules.map(r => ({...r, desc: r.desc_text}));
     }
 
-    // Грузим чаты
     let { data: chats } = await db.from('chats').select('*');
     if (!chats || chats.length === 0) {
       await db.from('chats').insert([{id: 'general', name: 'Общий чат'}]);
@@ -398,7 +452,14 @@ function showApp(){
   
   renderRules(); renderServices(); renderTests(); renderChats();
   updateStatsBar();
+  
+  // Запускаем таймеры активности
+  pingActivity();
+  loadTeam();
+  if(teamInterval) clearInterval(teamInterval);
+  teamInterval = setInterval(() => { pingActivity(); loadTeam(); }, 60000); // Каждую минуту
 }
+
 async function doLogin(){
   const n = document.getElementById('authName').value.trim();
   const s = document.getElementById('authSurname').value.trim();
@@ -411,12 +472,16 @@ async function doLogin(){
   try {
     const { data } = await db.from('profiles').select('*').eq('name', n).eq('surname', s).maybeSingle();
     if (data) {
-      await db.from('profiles').update({role}).eq('id', data.id);
-      USER = { ...data, role };
+      await db.from('profiles').update({role, last_seen: new Date().toISOString()}).eq('id', data.id);
+      USER = { ...data, role, last_seen: new Date().toISOString() };
     } else {
-      const { data: newUser } = await db.from('profiles').insert([{name: n, surname: s, role}]).select().single();
+      const { data: newUser } = await db.from('profiles').insert([{name: n, surname: s, role, last_seen: new Date().toISOString()}]).select().single();
       USER = newUser;
     }
+    
+    // СОХРАНЯЕМ СЕССИЮ В БРАУЗЕР
+    localStorage.setItem('pravka_user', JSON.stringify(USER));
+    
     e.classList.remove('show');
     await loadAllData();
     showApp();
@@ -429,8 +494,31 @@ async function doLogin(){
 
 document.getElementById('loginBtn').onclick = doLogin;
 document.getElementById('authPass').onkeydown = e=>{ if(e.key==='Enter') doLogin(); };
-document.getElementById('logoutBtn').onclick = ()=> location.reload();
+
+// Очищаем сессию при выходе
+document.getElementById('logoutBtn').onclick = ()=> {
+  if(teamInterval) clearInterval(teamInterval);
+  localStorage.removeItem('pravka_user');
+  location.reload();
+};
 document.getElementById('themeBtn').onclick = ()=> applyTheme(document.body.dataset.theme==='dark'?'light':'dark');
+
+// ПРОВЕРКА СЕССИИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (Автоматический вход)
+window.addEventListener('load', async () => {
+  const savedUser = localStorage.getItem('pravka_user');
+  if (savedUser) {
+    try {
+      USER = JSON.parse(savedUser);
+      // Быстро обновляем время, чтобы человек снова стал "онлайн"
+      await pingActivity(); 
+      await loadAllData();
+      showApp();
+    } catch(e) {
+      console.error("Ошибка восстановления сессии", e);
+      localStorage.removeItem('pravka_user');
+    }
+  }
+});
 
 /* ============ ВКЛАДКИ ============ */
 document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -438,7 +526,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
     document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
     const p = document.getElementById('tab-'+btn.dataset.tab); if(p) p.classList.add('active');
-    if(btn.dataset.tab==='team'){ renderChats(); }
+    if(btn.dataset.tab==='team'){ 
+      loadTeam(); 
+      renderChats(); 
+    }
   };
 });
 
@@ -522,33 +613,57 @@ function openService(id){
       </div>
     `;
 
-    // Встроенный базовый словарь (работает всегда)
     const LOCAL_YO = {
-      "елка": "ёлка", "ежик": "ёжик", "еще": "ещё", "пошел": "пошёл", 
-      "пришел": "пришёл", "мед": "мёд", "черный": "чёрный", "желтый": "жёлтый",
-      "щелка": "щёлка", "печенка": "печёнка", "береза": "берёза", "актер": "актёр",
-      "аленка": "алёнка", "артем": "артём"
+      "еще": "ещё", "пошел": "пошёл", "пришел": "пришёл", "ежик": "ёжик", "елка": "ёлка", "мед": "мёд", 
+      "черный": "чёрный", "желтый": "жёлтый", "щелка": "щёлка", "печенка": "печёнка", "береза": "берёза", 
+      "актер": "актёр", "аленка": "алёнка", "артем": "артём", "шлем": "шлём", "лжет": "лжёт", "ржет": "ржёт",
+      "идет": "идёт", "нашел": "нашёл", "зашел": "зашёл", "ушел": "ушёл", "вошел": "вошёл", "дошел": "дошёл",
+      "перешел": "перешёл", "прошел": "прошёл", "обошел": "обошёл", "подошел": "подошёл", "отошел": "отошёл"
     };
 
-    // Фоново грузим слова из Supabase
     let cloudDict = {};
-    db.from('yoficator').select('from_word, to_word').then(({data, error}) => {
+
+    // Функция для загрузки ВСЕХ 50 000 слов по частям
+    const loadFullCloudBase = async () => {
       const listEl = document.getElementById('yoList');
-      if (error) {
-        if(listEl) listEl.innerHTML = `<span style="color:var(--error)">Ошибка: ${esc(error.message)}<br>Скорее всего в Supabase не настроен доступ (RLS).</span>`;
-        return;
-      }
-      if (data && data.length > 0) {
-        data.forEach(item => { 
-          if(item.from_word && item.to_word) cloudDict[item.from_word.toLowerCase().trim()] = item.to_word.toLowerCase().trim(); 
-        });
-        if(listEl) {
-           listEl.innerHTML = `<span style="color:var(--accent)">Успешно загружено слов из облака: ${data.length}</span>`;
+      if (listEl) listEl.innerHTML = `<span style="color:var(--accent)">Загрузка всех 50 000 слов... Пожалуйста, подождите.</span>`;
+      
+      let allData = [];
+      let from = 0;
+      const step = 1000;
+      
+      try {
+        while (true) {
+          const { data, error } = await db
+            .from('yoficator')
+            .select('from_word, to_word')
+            .range(from, from + step - 1);
+            
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          
+          allData = allData.concat(data);
+          if (data.length < step) break; // Дошли до конца
+          from += step;
         }
-      } else {
-        if(listEl) listEl.innerHTML = `<span style="color:var(--muted)">В облаке пока нет слов.</span>`;
+        
+        // Превращаем массив в быстрый словарь
+        allData.forEach(item => { 
+          if(item.from_word && item.to_word) {
+            cloudDict[item.from_word.toLowerCase().trim()] = item.to_word.toLowerCase().trim(); 
+          }
+        });
+        
+        if (listEl) {
+          listEl.innerHTML = `<span style="color:var(--accent)">Успешно загружено слов из облака: ${allData.length}</span>`;
+        }
+      } catch(err) {
+        if (listEl) listEl.innerHTML = `<span style="color:var(--error)">Ошибка: ${esc(err.message)}</span>`;
       }
-    });
+    };
+
+    // Запускаем фоновую загрузку
+    loadFullCloudBase();
 
     document.getElementById('yoRun').onclick = ()=>{
       const t = document.getElementById('yoText').value;
