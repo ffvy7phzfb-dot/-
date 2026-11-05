@@ -408,58 +408,36 @@ async function yandexSpell(text) {
   } catch (e) { console.error('Spell:', e); return null; }
 }
  async function languageToolCheck(text) {
-    const url = 'https://languagetool-mvm6.onrender.com/v2/check';
+    // Твоя новая ссылка на Railway (не забудь /v2/check)
+    const url = 'https://languagetool-production-de58.up.railway.app/v2/check';
     
-    let attempt = 1;
-    
-    // Бесконечный цикл (пока не получим результат)
-    while (true) {
-        try {
-            console.log(`Попытка ${attempt}: стучимся в сервер...`);
-            
-            // Даем каждому запросу 90 секунд, чтобы сервер успел ответить, если он уже просыпается
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 90000); 
+    const controller = new AbortController();
+    // Даем серверу 30 секунд на ответ (обычно он отвечает за 1-2 секунды)
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                },
-                body: new URLSearchParams({
-                    text: text,
-                    language: 'ru-RU'
-                }),
-                signal: controller.signal
-            });
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                text: text,
+                language: 'ru-RU'
+            }),
+            signal: controller.signal
+        });
 
-            clearTimeout(timeoutId); // Если ответ пришел, отключаем таймер
+        clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                // Если сервер отдал 502 или 503 — значит он еще спит. Вызываем ошибку, чтобы уйти в catch.
-                throw new Error(`Сервер просыпается (Статус: ${response.status})`);
-            }
-
-            // Если дошли сюда — сервер проснулся и ответил!
-            console.log("Успех! Сервер ответил.");
-            return await response.json();
-
-        } catch (error) {
-            console.warn(`Попытка ${attempt} не удалась: ${error.message}`);
-            
-            // Увеличиваем номер попытки
-            attempt++;
-            
-            // Делаем паузу перед следующей попыткой. 
-            // Первые несколько раз ждем по 3 секунды, чтобы разбудить сервер побыстрее.
-            // Затем начинаем ждать по 5-10 секунд, чтобы не перегружать браузер.
-            const waitTime = attempt < 5 ? 3000 : 10000; 
-            console.log(`Ждем ${waitTime / 1000} секунд и пробуем снова...`);
-            
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            
-            // И цикл начинается заново
+        if (!response.ok) {
+            throw new Error(`Ошибка сервера: ${response.status}`);
         }
+
+        return await response.json();
+    } catch (error) {
+        console.error("Ошибка проверки:", error);
+        throw new Error('Не удалось проверить текст. Проверьте соединение.');
     }
 }
 
