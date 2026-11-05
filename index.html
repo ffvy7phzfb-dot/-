@@ -843,6 +843,185 @@ function initSpaces(){
     spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Все лишние пробелы удалены</div>`;
   };
 }
+  /* ============ ГРАММАТИКА (LanguageTool) ============ */
+function initGrammar(){
+  const panel = document.getElementById('panel-grammar');
+  
+  // Защита на случай, если панель не добавлена в HTML
+  if (!panel) return; 
+
+  panel.innerHTML = `
+    <h3>Грамматика</h3>
+    <div class="sp-desc">Поиск пунктуационных, грамматических и стилистических ошибок через LanguageTool.</div>
+    <div class="editor-box" id="grammarText" contenteditable="true" placeholder="Вставьте текст для проверки…"></div>
+    <div class="action-bar">
+      <button class="btn primary" id="grammarRun">Проверить</button>
+      <button class="btn" id="btnClear_grammarText">Очистить</button>
+      <button class="btn" id="btnCopy_grammarText">Копировать текст</button>
+    </div>
+    <div class="typo-result" id="grammarResult"></div>
+  `;
+
+  const grammarTextEl = document.getElementById('grammarText');
+  setupActions('grammarText', 'grammarResult');
+  let currentIssues = [];
+
+  function renderGrammarList() {
+    const resultEl = document.getElementById('grammarResult');
+    const pendingIssues = currentIssues.filter(i => i.status === 'pending');
+
+    if (pendingIssues.length === 0 && currentIssues.length > 0) {
+       resultEl.innerHTML = `<div class="res-summary ok">✓ Все замечания обработаны!</div>`;
+       grammarTextEl.innerText = grammarTextEl.innerText;
+       return;
+    }
+
+    if (currentIssues.length === 0) {
+      resultEl.innerHTML = `<div class="res-summary ok">✓ Ошибок не найдено</div>`;
+      grammarTextEl.innerText = grammarTextEl.innerText;
+      return;
+    }
+
+    let html = `
+      <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>✕ Замечаний: ${pendingIssues.length}</span>
+        <div>
+          <button class="btn small" id="acceptAllGrammar">Принять все</button>
+          <button class="btn small" id="rejectAllGrammar">Отклонить все</button>
+        </div>
+      </div>
+    `;
+
+    const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
+
+    sortedForList.forEach((i, idx) => {
+      if (i.status !== 'pending') return; 
+      
+      let msgHtml = i.msg ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>` : '';
+      let replText = i.repl ? `→ <b style="color:var(--ok)">${esc(i.repl)}</b>` : '(нет варианта замены)';
+
+      html += `
+        <div class="issue" style="border-left-color:var(--accent); background:rgba(94,234,212,0.05); animation-delay: ${idx * 0.05}s">
+          <span class="i-rule" style="color:var(--accent)">${esc(i.source)}</span>
+          <span class="i-detail">
+            <b style="color:var(--error)">${esc(i.word)}</b> ${replText}
+            ${msgHtml}
+          </span>
+          <div class="issue-actions">
+            ${i.repl ? `<button class="btn small" style="background:rgba(124,255,178,0.2); color:var(--ok); border-color:rgba(124,255,178,0.4);" onclick="applyGrammarFix(${currentIssues.indexOf(i)})">Принять</button>` : ''}
+            <button class="btn small" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);" onclick="rejectGrammarFix(${currentIssues.indexOf(i)})">Отклонить</button>
+          </div>
+        </div>`;
+    });
+
+    resultEl.innerHTML = html;
+
+    let text = grammarTextEl.innerText;
+    let highlightHtml = '';
+    let lastIndex = 0;
+
+    const pendingSorted = pendingIssues.sort((a,b) => a.start - b.start);
+
+    pendingSorted.forEach(i => {
+      if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
+      const badText = text.slice(i.start, i.end) || i.word;
+      // Используем класс hl-grammar (зеленый)
+      highlightHtml += `<span class="hl-grammar" title="${esc(i.msg || '')}">${esc(badText)}</span>`;
+      lastIndex = i.end;
+    });
+    if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
+
+    grammarTextEl.innerHTML = highlightHtml;
+
+    document.getElementById('acceptAllGrammar').onclick = () => {
+      let text = grammarTextEl.innerText;
+      const pending = currentIssues.filter(i => i.status === 'pending' && i.repl).sort((a,b) => b.start - a.start);
+      pending.forEach(issue => {
+        text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+        issue.status = 'accepted';
+      });
+      currentIssues.filter(i => i.status === 'pending' && !i.repl).forEach(i => i.status = 'rejected');
+      
+      grammarTextEl.innerText = text;
+      renderGrammarList();
+    };
+
+    document.getElementById('rejectAllGrammar').onclick = () => {
+      currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+      renderGrammarList();
+    };
+  }
+
+  window.applyGrammarFix = (idx) => {
+    const issue = currentIssues[idx];
+    issue.status = 'accepted';
+    let text = grammarTextEl.innerText;
+    grammarTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+
+    const diff = issue.repl.length - (issue.end - issue.start);
+    currentIssues.forEach(other => {
+      if (other.status === 'pending' && other.start > issue.start) {
+        other.start += diff;
+        other.end += diff;
+      }
+    });
+    renderGrammarList();
+  };
+
+  window.rejectGrammarFix = (idx) => {
+    currentIssues[idx].status = 'rejected';
+    renderGrammarList();
+  };
+
+  document.getElementById('grammarRun').onclick = async () => {
+    const t = grammarTextEl.innerText;
+    const resultEl = document.getElementById('grammarResult');
+    if (!t.trim()) { grammarTextEl.innerHTML = ''; resultEl.innerHTML = ''; return; }
+
+    const timer = startTimer(resultEl);
+    const ltData = await languageToolCheck(t);
+    timer.stop();
+
+    if (!ltData || !ltData.matches) {
+      resultEl.innerHTML = `<div class="res-summary err">Ошибка при запросе к LanguageTool. Попробуйте позже.</div>`;
+      return;
+    }
+
+    const all = [];
+    ltData.matches.forEach(m => {
+      let repl = (m.replacements && m.replacements.length) ? m.replacements[0].value : '';
+      
+      let src = 'Грамматика';
+      if (m.rule && m.rule.issueType) {
+        if (m.rule.issueType === 'typographical') src = 'Типографика';
+        else if (m.rule.issueType === 'style') src = 'Стиль';
+        else if (m.rule.issueType === 'misspelling') src = 'Орфография';
+      }
+
+      all.push({
+        word: t.substring(m.offset, m.offset + m.length),
+        repl: repl,
+        start: m.offset,
+        end: m.offset + m.length,
+        msg: m.message,
+        source: src,
+        status: 'pending'
+      });
+    });
+
+    all.sort((a,b) => b.start - a.start);
+    
+    const seen = new Set();
+    currentIssues = all.filter(i => {
+      const key = (i.word || '').toLowerCase() + '|' + (i.repl || '').toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    renderGrammarList();
+  };
+}
 
 /* ============ СТАРТ ============ */
 init();
