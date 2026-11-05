@@ -298,6 +298,7 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   <div class="service-panel" id="panel-typos"></div>
   <div class="service-panel" id="panel-spaces"></div>
   <div class="service-panel" id="panel-stub"></div>
+  <div class="service-panel" id="panel-grammar"></div>
 </section>
 
 <!-- ПРАВИЛА -->
@@ -347,7 +348,7 @@ const SERVICES = [
   { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Ошибки можно принять/отклонить.", badge:"орфография" },
   { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные пробелы и пробелы в начале/конце. Подсвечивает желтым.", badge:"форматирование" },
   { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"в разработке" },
-  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация и грамматика.", badge:"в разработке" }
+  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация, грамматика и стиль. Поиск ошибок через LanguageTool.", badge:"грамматика" }
 ];
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
@@ -406,6 +407,18 @@ async function yandexSpell(text) {
     return await r.json();
   } catch (e) { console.error('Spell:', e); return null; }
 }
+  async function languageToolCheck(text) {
+  const url = 'https://api.languagetool.org/v2/check';
+  const body = new URLSearchParams({ text, language: 'ru-RU' });
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) { 
+    console.error('LanguageTool:', e); 
+    return null; 
+  }
+}
 
 /* ============ ОБЛАЧНЫЙ СЛОВАРЬ «Ё» (грузится один раз при старте) ============ */
 const LOCAL_YO = {
@@ -450,6 +463,7 @@ function init(){
   initYoficator();
   initTypos();
   initSpaces();
+  initGrammar();
   loadCloudDict(); // стартует сразу, словарь будет готов к моменту работы
 }
 
@@ -479,7 +493,7 @@ function renderServices(){
 }
 
 /* Показываем одну из постоянных панелей */
-const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces' };
+const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces', grammar:'panel-grammar' };
 function openService(id){
   // скрыть все
   document.querySelectorAll('.service-panel').forEach(p=>p.classList.remove('show'));
