@@ -373,6 +373,202 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
 }
 .first-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .first-hint .fh-emoji { font-size: 20px; }
+
+/* ============ ВКЛАДКА ПРОВЕРКА ============ */
+.check-tab-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .check-tab-layout { grid-template-columns: 1fr; } }
+
+.check-left, .check-right {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.check-left textarea {
+  width: 100%;
+  min-height: 380px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  padding: 14px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.6;
+  outline: none;
+  resize: vertical;
+  transition: border-color .2s, box-shadow .2s;
+}
+.check-left textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(94,234,212,0.1);
+}
+
+.check-actions {
+  display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+}
+
+.check-right {
+  position: sticky;
+  top: 80px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.check-summary {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+.check-summary .cs-item {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 1; min-width: 90px;
+}
+.check-summary .cs-num {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  line-height: 1.1;
+}
+.check-summary .cs-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-top: 2px;
+}
+.check-summary .cs-num.warn { color: var(--warn); }
+.check-summary .cs-num.err { color: var(--error); }
+.check-summary .cs-num.ok { color: var(--ok); }
+
+/* Блок сервиса в результатах */
+.svc-block {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  animation: slideIn 0.3s ease-out backwards;
+}
+.svc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .2s;
+}
+.svc-head:hover { background: var(--surface-hover); }
+.svc-head .svc-icon {
+  width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700;
+  border-radius: 8px;
+  background: rgba(94,234,212,0.12);
+  border: 1px solid rgba(94,234,212,0.25);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.svc-head .svc-name { font-weight: 600; font-size: 14px; flex: 1; }
+.svc-head .svc-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: rgba(255,92,138,0.12);
+  color: var(--error);
+  border: 1px solid rgba(255,92,138,0.25);
+}
+.svc-head .svc-count.zero {
+  background: rgba(124,255,178,0.1);
+  color: var(--ok);
+  border-color: rgba(124,255,178,0.25);
+}
+.svc-head .svc-chevron {
+  color: var(--muted);
+  font-size: 12px;
+  transition: transform .25s;
+}
+.svc-block.open .svc-chevron { transform: rotate(90deg); }
+
+.svc-body {
+  display: none;
+  padding: 0 14px 14px 14px;
+  border-top: 1px solid var(--border);
+}
+.svc-block.open .svc-body { display: block; }
+
+.svc-body .svc-actions {
+  display: flex; gap: 6px; margin: 10px 0;
+  flex-wrap: wrap;
+}
+
+.svc-empty {
+  padding: 14px 0;
+  color: var(--ok);
+  font-size: 13px;
+  text-align: center;
+}
+
+.check-issue {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 11px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: rgba(255,92,138,0.05);
+  border-left: 3px solid var(--error);
+  font-size: 13px;
+  animation: slideIn 0.3s ease-out backwards;
+}
+.check-issue.accepted {
+  background: rgba(124,255,178,0.06);
+  border-left-color: var(--ok);
+  opacity: 0.7;
+}
+.check-issue .ci-text { flex: 1; min-width: 0; }
+.check-issue .ci-word {
+  color: var(--error);
+  font-weight: 600;
+  word-break: break-word;
+}
+.check-issue.accepted .ci-word { color: var(--ok); }
+.check-issue .ci-repl { color: var(--ok); font-weight: 600; }
+.check-issue .ci-msg {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.check-issue .ci-actions {
+  display: flex; gap: 4px; flex-shrink: 0;
+}
+
+.external-links-box {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.external-links-box .elb-title {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+.external-links-box .elb-btns {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -431,10 +627,38 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   <!-- ПРОВЕРКА -->
   <section class="tab-panel" id="tab-check">
     <h2 class="section-title">Проверка текста</h2>
-    <div class="dev-placeholder">
-      <div class="icon">📝</div>
-      <h3>Раздел в разработке</h3>
-      <p>Мы работаем над этим инструментом. Он будет доступен в ближайшее время.</p>
+    <p class="section-desc">Вставьте текст один раз — «Правка» прогонит его через все сервисы сразу.</p>
+
+    <div class="check-tab-layout">
+      <div class="check-left">
+        <textarea id="checkInput" placeholder="Вставьте сюда текст — и нажмите «Проверить всё»…"></textarea>
+        <div class="check-actions">
+          <button class="btn primary" id="checkRun">Проверить всё</button>
+          <button class="btn" id="checkClear">Очистить</button>
+          <button class="btn" id="checkPaste">Вставить из буфера</button>
+          <button class="btn" id="checkCopy">Копировать результат</button>
+        </div>
+
+        <div class="external-links-box">
+          <div class="elb-title">Открыть текст во внешних сервисах</div>
+          <div class="elb-btns">
+            <button class="btn small" data-ext="https://babkinad-lang.github.io/Markdown-Check/">📋 Markdown-чекер</button>
+            <button class="btn small" data-ext="https://beautytext.netlify.app/">✨ BeautyText</button>
+            <button class="btn small" data-ext="https://povtori.netlify.app/">🔁 Поиск повторов</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="check-right">
+        <div id="checkSummary" class="check-summary" style="display:none;"></div>
+        <div id="checkResults">
+          <div class="dev-placeholder" style="border:none; background:transparent; padding:30px 10px;">
+            <div class="icon" style="font-size:36px;">🔎</div>
+            <h3 style="font-size:16px;">Здесь появятся результаты</h3>
+            <p style="font-size:13px;">Вставьте текст слева и нажмите «Проверить всё»</p>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -594,6 +818,34 @@ async function loadCloudDict() {
   if (listEl) listEl.innerHTML = `<span style="color:${cloudStatus.startsWith('Ошибка') ? 'var(--error)' : 'var(--accent)'}">${esc(cloudStatus)}</span>`;
 }
 
+/* ============ СЛОВАРЬ КАНЦЕЛЯРИТА (общий, грузится 1 раз) ============ */
+let canceloDict = {};
+let canceloStatus = "Загрузка...";
+
+async function loadCanceloDict() {
+  let allData = []; let from = 0; const step = 1000;
+  try {
+    while (true) {
+      const { data, error } = await db.from('cancelo').select('from_phrase, to_phrase, note').range(from, from + step - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < step) break;
+      from += step;
+    }
+    allData.forEach(item => {
+      if (item.from_phrase && item.to_phrase) {
+        canceloDict[item.from_phrase.toLowerCase().trim()] = item.to_phrase.trim();
+      }
+    });
+    canceloStatus = `Успешно загружено фраз: ${allData.length}`;
+  } catch(err) {
+    canceloStatus = `Ошибка: ${err.message}`;
+  }
+  const listEl = document.getElementById('canceloList');
+  if (listEl) listEl.innerHTML = `<span style="color:${canceloStatus.startsWith('Ошибка') ? 'var(--error)' : 'var(--accent)'}">${esc(canceloStatus)}</span>`;
+}
+
 /* ============ ИНИЦИАЛИЗАЦИЯ ============ */
 function init(){
   applyTheme('dark');
@@ -606,7 +858,9 @@ function init(){
   initMarkdown();
   initBeautytext();
   initPovtori();
+  initCheckTab();
   loadCloudDict();
+  loadCanceloDict();
 }
 
 document.getElementById('themeBtn').onclick = ()=> applyTheme(document.body.dataset.theme==='dark'?'light':'dark');
@@ -666,11 +920,9 @@ function openService(id){
   const panel = PANEL_IDS[id] ? document.getElementById(PANEL_IDS[id]) : null;
 
   if (panel) {
-    // Удаляем старую полосу, если была
     const oldBar = panel.querySelector('.back-bar');
     if (oldBar) oldBar.remove();
 
-    // Вставляем sticky-полосу
     const bar = document.createElement('div');
     bar.className = 'back-bar';
     bar.innerHTML = `
@@ -1220,33 +1472,6 @@ function initGrammar(){
 }
 
 /* ============ КАНЦЕЛЯРИТ ============ */
-let canceloDict = {};
-let canceloStatus = "Загрузка...";
-
-async function loadCanceloDict() {
-  let allData = []; let from = 0; const step = 1000;
-  try {
-    while (true) {
-      const { data, error } = await db.from('cancelo').select('from_phrase, to_phrase, note').range(from, from + step - 1);
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-      allData = allData.concat(data);
-      if (data.length < step) break;
-      from += step;
-    }
-    allData.forEach(item => {
-      if (item.from_phrase && item.to_phrase) {
-        canceloDict[item.from_phrase.toLowerCase().trim()] = item.to_phrase.trim();
-      }
-    });
-    canceloStatus = `Успешно загружено фраз: ${allData.length}`;
-  } catch(err) {
-    canceloStatus = `Ошибка: ${err.message}`;
-  }
-  const listEl = document.getElementById('canceloList');
-  if (listEl) listEl.innerHTML = `<span style="color:${canceloStatus.startsWith('Ошибка') ? 'var(--error)' : 'var(--accent)'}">${esc(canceloStatus)}</span>`;
-}
-
 function initCancelo(){
   const panel = document.getElementById('panel-cancelo');
   if (!panel) return;
@@ -1440,8 +1665,6 @@ function initCancelo(){
     currentIssues = [];
     document.getElementById('canceloResult').innerHTML = `<div class="res-summary ok">✓ Заменено канцеляритов: ${count}</div>`;
   };
-
-  if (Object.keys(canceloDict).length === 0) loadCanceloDict();
 }
 
 /* ============ MARKDOWN-ЧЕКЕР (внешний, через iframe) ============ */
@@ -1450,7 +1673,7 @@ function initMarkdown(){
   if (!panel) return;
   panel.innerHTML = `
     <h3>Markdown-чекер</h3>
-    <div class="sp-desc">Проверка текста на соответствие редакционной политике.</div>
+    <div class="sp-desc">Проверка текста на соответствие редакционной политике. Сервис открывается внутри «Правки».</div>
     <div class="iframe-wrap">
       <iframe
         src="https://babkinad-lang.github.io/Markdown-Check/"
@@ -1505,6 +1728,340 @@ function initPovtori(){
       <a class="btn" href="https://povtori.netlify.app/" target="_blank" rel="noopener">Открыть в новой вкладке</a>
     </div>
   `;
+}
+
+/* ============ ВКЛАДКА ПРОВЕРКА (всё разом) ============ */
+const LOCAL_TYPOS_GLOBAL = {
+  "агенство": "агентство", "аппеляция": "апелляция", "безценный": "бесценный",
+  "будующий": "будущий", "втечение": "в течение", "галлерея": "галерея",
+  "дезенфекция": "дезинфекция", "занет": "занят", "извените": "извините",
+  "координальный": "кардинальный", "ложить": "класть", "паралельный": "параллельный",
+  "переспектива": "перспектива", "прийдется": "придётся",
+  "черезчур": "чересчур", "эфект": "эффект"
+};
+
+function initCheckTab(){
+  const input = document.getElementById('checkInput');
+  const runBtn = document.getElementById('checkRun');
+  const clearBtn = document.getElementById('checkClear');
+  const pasteBtn = document.getElementById('checkPaste');
+  const copyBtn = document.getElementById('checkCopy');
+  const resultsEl = document.getElementById('checkResults');
+  const summaryEl = document.getElementById('checkSummary');
+  if (!input || !runBtn) return;
+
+  // Состояние: результаты по сервисам
+  let state = {
+    text: '',
+    services: {
+      yoficator: { title: 'Ёфикатор', icon: 'Ё', issues: [] },
+      typos:     { title: 'Опечатки', icon: '🔍', issues: [] },
+      spaces:    { title: 'Пробелы',  icon: '⎵',  issues: [] },
+      cancelo:   { title: 'Канцелярит', icon: '🧹', issues: [] },
+      grammar:   { title: 'Грамматика', icon: '📝', issues: [] }
+    }
+  };
+
+  function totalCounts() {
+    let total = 0, accepted = 0, pending = 0;
+    for (const key in state.services) {
+      state.services[key].issues.forEach(i => {
+        total++;
+        if (i.status === 'accepted') accepted++;
+        else if (i.status === 'pending') pending++;
+      });
+    }
+    return { total, accepted, pending };
+  }
+
+  function renderSummary() {
+    const { total, accepted, pending } = totalCounts();
+    if (total === 0) { summaryEl.style.display = 'none'; return; }
+    summaryEl.style.display = 'flex';
+    summaryEl.innerHTML = `
+      <div class="cs-item"><span class="cs-num">${total}</span><span class="cs-label">всего</span></div>
+      <div class="cs-item"><span class="cs-num ok">${accepted}</span><span class="cs-label">исправлено</span></div>
+      <div class="cs-item"><span class="cs-num warn">${pending}</span><span class="cs-label">осталось</span></div>
+    `;
+  }
+
+  function renderResults() {
+    renderSummary();
+
+    let anyIssues = false;
+    let html = '';
+
+    for (const key in state.services) {
+      const svc = state.services[key];
+      const total = svc.issues.length;
+      const pending = svc.issues.filter(i => i.status === 'pending').length;
+      if (total > 0) anyIssues = true;
+
+      html += `
+        <div class="svc-block ${pending > 0 ? 'open' : ''}" data-svc="${key}">
+          <div class="svc-head">
+            <div class="svc-icon">${esc(svc.icon)}</div>
+            <div class="svc-name">${esc(svc.title)}</div>
+            <div class="svc-count ${total === 0 ? 'zero' : ''}">${total === 0 ? '0' : total}</div>
+            <div class="svc-chevron">▶</div>
+          </div>
+          <div class="svc-body">
+            ${total === 0 ? `<div class="svc-empty">✓ Замечаний нет</div>` : `
+              <div class="svc-actions">
+                <button class="btn small" data-act="acceptAll" data-svc="${key}" style="background:rgba(124,255,178,0.15); color:var(--ok); border-color:rgba(124,255,178,0.35);">Принять все</button>
+                <button class="btn small" data-act="rejectAll" data-svc="${key}" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);">Отклонить все</button>
+              </div>
+              ${svc.issues.map((i, idx) => `
+                <div class="check-issue ${i.status === 'accepted' ? 'accepted' : ''}">
+                  <div class="ci-text">
+                    <span class="ci-word">${esc(i.word)}</span>
+                    ${i.repl ? ` → <span class="ci-repl">${esc(i.repl)}</span>` : ''}
+                    ${i.msg ? `<span class="ci-msg">${esc(i.msg)}</span>` : ''}
+                  </div>
+                  <div class="ci-actions">
+                    ${i.status === 'pending' ? `
+                      ${i.repl ? `<button class="btn small" data-act="accept" data-svc="${key}" data-idx="${idx}" style="background:rgba(124,255,178,0.2); color:var(--ok); border-color:rgba(124,255,178,0.4);">✓</button>` : ''}
+                      <button class="btn small" data-act="reject" data-svc="${key}" data-idx="${idx}" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);">✕</button>
+                    ` : `<span style="font-size:11px; color:var(--ok);">✓ принято</span>`}
+                  </div>
+                </div>
+              `).join('')}
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    if (!anyIssues) {
+      html = `<div class="res-summary ok" style="text-align:center; padding:20px;">✓ Проверка завершена — замечаний не найдено!</div>` + html;
+    }
+
+    resultsEl.innerHTML = html;
+
+    // События: свернуть/развернуть
+    resultsEl.querySelectorAll('.svc-head').forEach(h => {
+      h.onclick = () => h.parentElement.classList.toggle('open');
+    });
+
+    // События: принять/отклонить
+    resultsEl.querySelectorAll('button[data-act]').forEach(btn => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const act = btn.dataset.act;
+        const svcKey = btn.dataset.svc;
+        const svc = state.services[svcKey];
+        if (act === 'accept') {
+          const idx = +btn.dataset.idx;
+          const issue = svc.issues[idx];
+          if (issue && issue.repl && issue.status === 'pending') {
+            applyFixToText(issue);
+            issue.status = 'accepted';
+          }
+        } else if (act === 'reject') {
+          const idx = +btn.dataset.idx;
+          if (svc.issues[idx]) svc.issues[idx].status = 'rejected';
+        } else if (act === 'acceptAll') {
+          svc.issues.filter(i => i.status === 'pending' && i.repl).sort((a,b) => b.start - a.start).forEach(i => {
+            applyFixToText(i);
+            i.status = 'accepted';
+          });
+          svc.issues.filter(i => i.status === 'pending' && !i.repl).forEach(i => i.status = 'rejected');
+        } else if (act === 'rejectAll') {
+          svc.issues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+        }
+        // Обновляем textarea
+        input.value = state.text;
+        renderResults();
+      };
+    });
+  }
+
+  function applyFixToText(issue) {
+    // Заменяем в state.text и во всех других сервисах сдвигаем позиции
+    const oldLen = issue.end - issue.start;
+    const newLen = issue.repl.length;
+    const diff = newLen - oldLen;
+
+    state.text = state.text.slice(0, issue.start) + issue.repl + state.text.slice(issue.end);
+
+    // Сдвигаем позиции замечаний в других сервисах и в этом же
+    for (const k in state.services) {
+      state.services[k].issues.forEach(other => {
+        if (other === issue) return;
+        if (other.start >= issue.end) {
+          other.start += diff;
+          other.end += diff;
+        } else if (other.start >= issue.start && other.end <= issue.end) {
+          // Пересекается — деактивируем
+          other.status = 'rejected';
+        }
+      });
+    }
+  }
+
+  async function runAllChecks() {
+    const text = input.value;
+    if (!text.trim()) return;
+
+    state.text = text;
+    // Сброс
+    for (const k in state.services) state.services[k].issues = [];
+
+    // Таймер
+    const timer = startTimer(resultsEl);
+
+    // 1. Ёфикатор (просто находим слова, которые можно ёфицировать)
+    const yoIssues = [];
+    const yoRe = /[а-яё]+/gi;
+    let m;
+    while ((m = yoRe.exec(text)) !== null) {
+      const lower = m[0].toLowerCase();
+      const repl = LOCAL_YO[lower] || cloudDict[lower];
+      if (repl) {
+        let r = repl;
+        if (m[0][0] === m[0][0].toUpperCase()) r = r.charAt(0).toUpperCase() + r.slice(1);
+        yoIssues.push({ word: m[0], repl: r, start: m.index, end: m.index + m[0].length, source: 'Ё', status: 'pending' });
+      }
+    }
+    state.services.yoficator.issues = yoIssues;
+
+    // 2. Опечатки (локальный словарь + Yandex)
+    const typoIssues = [];
+    const typoRe = /[а-яё]+/gi;
+    while ((m = typoRe.exec(text)) !== null) {
+      const lower = m[0].toLowerCase();
+      if (LOCAL_TYPOS_GLOBAL[lower]) {
+        typoIssues.push({ word: m[0], repl: LOCAL_TYPOS_GLOBAL[lower], start: m.index, end: m.index + m[0].length, source: 'Словарь', status: 'pending' });
+      }
+    }
+    // Yandex — параллельно с остальными
+    const yandexPromise = yandexSpell(text).then(yandex => {
+      if (Array.isArray(yandex)) {
+        yandex.forEach(e => {
+          typoIssues.push({ word: e.word, repl: (e.s && e.s.length) ? e.s[0] : '', start: e.pos, end: e.pos + e.word.length, source: 'Орфография', status: 'pending' });
+        });
+      }
+    }).catch(() => {});
+
+    // 3. Пробелы (мгновенно)
+    const spaceIssues = [];
+    const multiSpaces = / {2,}/g;
+    while ((m = multiSpaces.exec(text)) !== null) {
+      spaceIssues.push({ word: m[0].length + ' пробелов', repl: ' ', start: m.index, end: m.index + m[0].length, source: 'Пробелы', status: 'pending' });
+    }
+    const lines = text.split('\n');
+    let pos = 0;
+    lines.forEach((line, i) => {
+      if (/^ +/.test(line)) {
+        const spaces = line.match(/^ +/)[0];
+        spaceIssues.push({ word: 'Пробелы в начале строки ' + (i+1), repl: '', start: pos, end: pos + spaces.length, source: 'Пробелы', status: 'pending' });
+      }
+      if (/ +$/.test(line)) {
+        const spaces = line.match(/ +$/)[0];
+        spaceIssues.push({ word: 'Пробелы в конце строки ' + (i+1), repl: '', start: pos + line.length - spaces.length, end: pos + line.length, source: 'Пробелы', status: 'pending' });
+      }
+      pos += line.length + 1;
+    });
+    state.services.spaces.issues = spaceIssues;
+
+    // 4. Канцелярит (мгновенно, если словарь загружен)
+    const canceloIssues = [];
+    if (Object.keys(canceloDict).length > 0) {
+      const lowerText = text.toLowerCase();
+      for (const phrase in canceloDict) {
+        let idx = 0;
+        while ((idx = lowerText.indexOf(phrase, idx)) !== -1) {
+          const before = idx === 0 ? '' : lowerText[idx - 1];
+          const after = lowerText[idx + phrase.length] || '';
+          if (!/[а-яёa-z]/i.test(before) && !/[а-яёa-z]/i.test(after)) {
+            canceloIssues.push({ word: text.slice(idx, idx + phrase.length), repl: canceloDict[phrase], start: idx, end: idx + phrase.length, source: 'Канцелярит', status: 'pending' });
+          }
+          idx += phrase.length;
+        }
+      }
+    }
+    state.services.cancelo.issues = canceloIssues;
+
+    // 5. Грамматика (LanguageTool — самый медленный, ждём)
+    let ltData = null;
+    try {
+      ltData = await languageToolCheck(text);
+    } catch (e) { /* молча */ }
+    const grammarIssues = [];
+    if (ltData && ltData.matches) {
+      ltData.matches.forEach(mt => {
+        const repl = (mt.replacements && mt.replacements.length) ? mt.replacements[0].value : '';
+        let src = 'Грамматика';
+        if (mt.rule && mt.rule.issueType) {
+          if (mt.rule.issueType === 'typographical') src = 'Типографика';
+          else if (mt.rule.issueType === 'style') src = 'Стиль';
+          else if (mt.rule.issueType === 'misspelling') src = 'Орфография';
+        }
+        grammarIssues.push({
+          word: text.substring(mt.offset, mt.offset + mt.length),
+          repl: repl,
+          start: mt.offset,
+          end: mt.offset + mt.length,
+          msg: mt.message,
+          source: src,
+          status: 'pending'
+        });
+      });
+    }
+    state.services.grammar.issues = grammarIssues;
+
+    // Дожидаемся Яндекс
+    await yandexPromise;
+    state.services.typos.issues = typoIssues;
+
+    timer.stop();
+    renderResults();
+  }
+
+  runBtn.onclick = runAllChecks;
+
+  clearBtn.onclick = () => {
+    input.value = '';
+    state.text = '';
+    for (const k in state.services) state.services[k].issues = [];
+    resultsEl.innerHTML = `
+      <div class="dev-placeholder" style="border:none; background:transparent; padding:30px 10px;">
+        <div class="icon" style="font-size:36px;">🔎</div>
+        <h3 style="font-size:16px;">Здесь появятся результаты</h3>
+        <p style="font-size:13px;">Вставьте текст слева и нажмите «Проверить всё»</p>
+      </div>`;
+    summaryEl.style.display = 'none';
+  };
+
+  pasteBtn.onclick = async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (t) input.value = t;
+    } catch (e) {
+      alert('Не удалось вставить: браузер не дал доступ к буферу обмена.');
+    }
+  };
+
+  copyBtn.onclick = () => {
+    if (!state.text) return;
+    navigator.clipboard.writeText(state.text).then(() => {
+      const old = copyBtn.textContent;
+      copyBtn.textContent = 'Скопировано!';
+      setTimeout(() => copyBtn.textContent = old, 1500);
+    });
+  };
+
+  // Кнопки внешних сервисов — копируют текст и открывают
+  document.querySelectorAll('[data-ext]').forEach(btn => {
+    btn.onclick = async () => {
+      const url = btn.dataset.ext;
+      const text = input.value || '';
+      if (text) {
+        try { await navigator.clipboard.writeText(text); } catch (e) {}
+      }
+      window.open(url, '_blank');
+    };
+  });
 }
 
 /* ============ СТАРТ ============ */
