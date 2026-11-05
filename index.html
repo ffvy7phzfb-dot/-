@@ -408,16 +408,48 @@ async function yandexSpell(text) {
   } catch (e) { console.error('Spell:', e); return null; }
 }
   async function languageToolCheck(text) {
-  const url = 'https://languagetool-mvm6.onrender.com/v2/check';
-  const body = new URLSearchParams({ text, language: 'ru-RU' });
-  try {
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return await r.json();
-  } catch (e) { 
-    console.error('LanguageTool:', e); 
-    return null; 
-  }
+    const url = 'https://languagetool-mvm6.onrender.com/v2/check';
+    
+    // Делаем до 3 попыток
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            // Создаем контроллер для таймаута (ждем 60 секунд)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); 
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    text: text,
+                    language: 'ru-RU'
+                }),
+                signal: controller.signal // Привязываем таймаут
+            });
+
+            clearTimeout(timeoutId); // Очищаем таймаут, если успели
+
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+
+            const data = await response.json();
+            return data; // Успех! Возвращаем результат
+
+        } catch (error) {
+            console.warn(`Попытка ${attempt} не удалась:`, error.message);
+            
+            if (attempt === 3) {
+                // Если это была последняя попытка, показываем ошибку
+                throw new Error('Не удалось связаться с сервером. Пожалуйста, подождите минуту и попробуйте снова.');
+            }
+            
+            // Если сервер спит (502/503), ждем 5 секунд перед следующей попыткой
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
 }
 
 /* ============ ОБЛАЧНЫЙ СЛОВАРЬ «Ё» (грузится один раз при старте) ============ */
