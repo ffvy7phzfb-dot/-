@@ -286,6 +286,20 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   background: rgba(180, 83, 9, 0.07);
   border-color: rgba(180, 83, 9, 0.22);
 }
+
+/* iframe-обёртка для внешнего сервиса */
+.iframe-wrap {
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--input-bg);
+}
+.iframe-wrap iframe {
+  width: 100%;
+  height: 700px;
+  border: 0;
+  display: block;
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -325,6 +339,7 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   <div class="service-panel" id="panel-stub"></div>
   <div class="service-panel" id="panel-grammar"></div>
   <div class="service-panel" id="panel-cancelo"></div>
+  <div class="service-panel" id="panel-markdown"></div>
 </section>
 
 <!-- ПРАВИЛА -->
@@ -373,7 +388,8 @@ const SERVICES = [
   { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Ошибки можно принять/отклонить.", badge:"орфография" },
   { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные пробелы и пробелы в начале/конце. Подсвечивает желтым.", badge:"форматирование" },
   { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"словарь" },
-  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация, грамматика и стиль. Поиск ошибок через LanguageTool.", badge:"грамматика" }
+  { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация, грамматика и стиль. Поиск ошибок через LanguageTool.", badge:"грамматика" },
+  { id:"markdown", icon:"📋", name:"Markdown-чекер", desc:"Проверка текста на соответствие редакционной политике.", badge:"внешний" }
 ];
 
 /* ============ БАЗОВЫЕ ФУНКЦИИ ============ */
@@ -510,6 +526,7 @@ function init(){
   initSpaces();
   initGrammar();
   initCancelo();
+  initMarkdown();
   loadCloudDict();
 }
 
@@ -538,7 +555,7 @@ function renderServices(){
   g.querySelectorAll('[data-svc]').forEach(c=> c.onclick = ()=> openService(c.dataset.svc));
 }
 
-const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces', grammar:'panel-grammar', cancelo:'panel-cancelo' };
+const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces', grammar:'panel-grammar', cancelo:'panel-cancelo', markdown:'panel-markdown' };
 function openService(id){
   document.querySelectorAll('.service-panel').forEach(p=>p.classList.remove('show'));
   if (PANEL_IDS[id]) {
@@ -1298,6 +1315,27 @@ function initCancelo(){
   };
 
   if (Object.keys(canceloDict).length === 0) loadCanceloDict();
+}
+
+/* ============ MARKDOWN-ЧЕКЕР (внешний, через iframe) ============ */
+function initMarkdown(){
+  const panel = document.getElementById('panel-markdown');
+  if (!panel) return;
+  panel.innerHTML = `
+    <h3>Markdown-чекер</h3>
+    <div class="sp-desc">Проверка текста на соответствие редакционной политике. Сервис открывается внутри «Правки».</div>
+    <div class="iframe-wrap">
+      <iframe
+        src="https://babkinad-lang.github.io/Markdown-Check/"
+        title="Markdown Check"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+    <div style="margin-top:12px;">
+      <a class="btn" href="https://babkinad-lang.github.io/Markdown-Check/" target="_blank" rel="noopener">Открыть в новой вкладке</a>
+    </div>
+  `;
 }
 
 /* ============ СТАРТ ============ */
