@@ -408,7 +408,7 @@ async function yandexSpell(text) {
   } catch (e) { console.error('Spell:', e); return null; }
 }
   async function languageToolCheck(text) {
-  const url = 'https://api.languagetool.org/v2/check';
+  const url = 'https://languagetool-mvm6.onrender.com/v2/check';
   const body = new URLSearchParams({ text, language: 'ru-RU' });
   try {
     const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString() });
