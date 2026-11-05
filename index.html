@@ -261,6 +261,31 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
 .opt.disabled{cursor:default;pointer-events:none;opacity:.85}
 .explain{margin-top:10px;padding:11px 13px;border-radius:9px;background:rgba(94,234,212,0.05);border:1px solid rgba(94,234,212,0.18);font-size:13px;color:var(--muted);display:none}
 .explain.show{display:block; animation: slideIn 0.3s ease-out;}
+
+/* Плашка "Я ещё только учусь" (грамматика) */
+.grammar-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: rgba(255, 209, 102, 0.08);
+  border: 1px solid rgba(255, 209, 102, 0.25);
+  color: var(--warn);
+  font-size: 13.5px;
+  line-height: 1.45;
+  animation: slideIn 0.4s ease-out;
+}
+.grammar-notice .gn-emoji {
+  font-size: 26px;
+  flex-shrink: 0;
+  animation: float 3s ease-in-out infinite;
+}
+[data-theme="light"] .grammar-notice {
+  background: rgba(180, 83, 9, 0.07);
+  border-color: rgba(180, 83, 9, 0.22);
+}
 </style>
 </head>
 <body data-theme="dark">
@@ -335,7 +360,6 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   <div class="footer">Правка<span class="caret"></span> · облачный режим</div>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 /* ============ ДАННЫЕ ============ */
@@ -874,6 +898,10 @@ function initGrammar(){
   panel.innerHTML = `
     <h3>Грамматика</h3>
     <div class="sp-desc">Поиск пунктуационных, грамматических и стилистических ошибок через LanguageTool.</div>
+    <div class="grammar-notice">
+      <span class="gn-emoji">🫶</span>
+      <span>Я ещё только учусь, поэтому могу ошибаться. Спасибо, что вы рядом!</span>
+    </div>
     <div class="editor-box" id="grammarText" contenteditable="true" placeholder="Вставьте текст для проверки…"></div>
     <div class="action-bar">
       <button class="btn primary" id="grammarRun">Проверить</button>
