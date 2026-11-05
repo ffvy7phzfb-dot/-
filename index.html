@@ -318,12 +318,13 @@ h2.section-title{font-family:var(--font-head);font-size:26px;font-weight:400;mar
   <p class="section-desc">Инструменты для работы с текстом.</p>
   <div class="services-grid" id="servicesGrid"></div>
 
-  <!-- Три постоянные панели, живут в DOM всегда -->
+  <!-- Панели сервисов -->
   <div class="service-panel" id="panel-yoficator"></div>
   <div class="service-panel" id="panel-typos"></div>
   <div class="service-panel" id="panel-spaces"></div>
   <div class="service-panel" id="panel-stub"></div>
   <div class="service-panel" id="panel-grammar"></div>
+  <div class="service-panel" id="panel-cancelo"></div>
 </section>
 
 <!-- ПРАВИЛА -->
@@ -371,7 +372,7 @@ const SERVICES = [
   { id:"yoficator", icon:"Ё", name:"Ёфикатор", desc:"Словарь слов с ё. Подсвечивает новые буквы.", badge:"словарь" },
   { id:"typos", icon:"🔍", name:"Опечатки", desc:"Свой словарь + проверка орфографии. Ошибки можно принять/отклонить.", badge:"орфография" },
   { id:"spaces", icon:"⎵", name:"Лишние пробелы", desc:"Находит двойные пробелы и пробелы в начале/конце. Подсвечивает желтым.", badge:"форматирование" },
-  { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"в разработке" },
+  { id:"cancelo", icon:"🧹", name:"Канцелярит", desc:"Находит тяжёлые обороты и предлагает замену.", badge:"словарь" },
   { id:"grammar", icon:"📝", name:"Грамматика", desc:"Пунктуация, грамматика и стиль. Поиск ошибок через LanguageTool.", badge:"грамматика" }
 ];
 
@@ -404,6 +405,19 @@ function setupActions(textId, resultId) {
   }
 }
 
+async function pasteFromClipboard(textId) {
+  try {
+    const text = await navigator.clipboard.readText();
+    if (!text) return;
+    const el = document.getElementById(textId);
+    if (el.tagName === 'TEXTAREA') el.value = text;
+    else el.innerText = text;
+    el.focus();
+  } catch (e) {
+    alert('Не удалось вставить: браузер не дал доступ к буферу обмена. Разреши доступ или вставь вручную (Ctrl+V).');
+  }
+}
+
 function startTimer(container) {
   const phrases = [ "Проверяю", "Ищу ошибочки", "Сверяю со словарём", "Анализирую текст", "Ещё чуть-чуть" ];
   let phraseIndex = 0;
@@ -431,33 +445,20 @@ async function yandexSpell(text) {
     return await r.json();
   } catch (e) { console.error('Spell:', e); return null; }
 }
- async function languageToolCheck(text) {
-    // Твоя новая ссылка на Railway (не забудь /v2/check)
-    const url = 'https://languagetool-production-de58.up.railway.app/v2/check';
-    
-    const controller = new AbortController();
-    // Даем серверу 30 секунд на ответ (обычно он отвечает за 1-2 секунды)
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
+async function languageToolCheck(text) {
+    const url = 'https://languagetool-production-de58.up.railway.app/v2/check';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
     try {
         const response = await fetch(url, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: new URLSearchParams({
-                text: text,
-                language: 'ru-RU'
-            }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ text: text, language: 'ru-RU' }),
             signal: controller.signal
         });
-
         clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`Ошибка сервера: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`Ошибка сервера: ${response.status}`);
         return await response.json();
     } catch (error) {
         console.error("Ошибка проверки:", error);
@@ -465,7 +466,7 @@ async function yandexSpell(text) {
     }
 }
 
-/* ============ ОБЛАЧНЫЙ СЛОВАРЬ «Ё» (грузится один раз при старте) ============ */
+/* ============ ОБЛАЧНЫЙ СЛОВАРЬ «Ё» ============ */
 const LOCAL_YO = {
   "еще": "ещё", "пошел": "пошёл", "пришел": "пришёл", "ежик": "ёжик", "елка": "ёлка", "мед": "мёд",
   "черный": "чёрный", "желтый": "жёлтый", "щелка": "щёлка", "печенка": "печёнка", "береза": "берёза",
@@ -496,7 +497,6 @@ async function loadCloudDict() {
   } catch(err) {
     cloudStatus = `Ошибка: ${err.message}`;
   }
-  // обновляем статус в панели ёфикатора, если она уже отрисована
   const listEl = document.getElementById('yoList');
   if (listEl) listEl.innerHTML = `<span style="color:${cloudStatus.startsWith('Ошибка') ? 'var(--error)' : 'var(--accent)'}">${esc(cloudStatus)}</span>`;
 }
@@ -509,7 +509,8 @@ function init(){
   initTypos();
   initSpaces();
   initGrammar();
-  loadCloudDict(); // стартует сразу, словарь будет готов к моменту работы
+  initCancelo();
+  loadCloudDict();
 }
 
 document.getElementById('themeBtn').onclick = ()=> applyTheme(document.body.dataset.theme==='dark'?'light':'dark');
@@ -537,15 +538,12 @@ function renderServices(){
   g.querySelectorAll('[data-svc]').forEach(c=> c.onclick = ()=> openService(c.dataset.svc));
 }
 
-/* Показываем одну из постоянных панелей */
-const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces', grammar:'panel-grammar' };
+const PANEL_IDS = { yoficator:'panel-yoficator', typos:'panel-typos', spaces:'panel-spaces', grammar:'panel-grammar', cancelo:'panel-cancelo' };
 function openService(id){
-  // скрыть все
   document.querySelectorAll('.service-panel').forEach(p=>p.classList.remove('show'));
   if (PANEL_IDS[id]) {
     document.getElementById(PANEL_IDS[id]).classList.add('show');
   } else {
-    // заглушка для в разработке
     const stub = document.getElementById('panel-stub');
     const s = SERVICES.find(x=>x.id===id);
     stub.innerHTML = `
@@ -556,7 +554,6 @@ function openService(id){
       </div>`;
     stub.classList.add('show');
   }
-  // прокрутить к панели
   const active = document.querySelector('.service-panel.show');
   if (active) active.scrollIntoView({ behavior:'smooth', block:'start' });
 }
@@ -572,6 +569,7 @@ function initYoficator(){
       <button class="btn primary" id="yoRun">Ёфицировать</button>
       <button class="btn" id="btnClear_yoText">Очистить</button>
       <button class="btn" id="btnCopy_yoText">Копировать текст</button>
+      <button class="btn" id="btnPaste_yoText">Вставить текст</button>
     </div>
     <div class="typo-result" id="yoStats" style="font-family:var(--font-mono); font-size:13px; color:var(--muted);"></div>
 
@@ -583,6 +581,7 @@ function initYoficator(){
 
   const yoTextEl = document.getElementById('yoText');
   setupActions('yoText', 'yoStats');
+  document.getElementById('btnPaste_yoText').onclick = () => pasteFromClipboard('yoText');
 
   document.getElementById('yoRun').onclick = ()=>{
     let originalText = yoTextEl.innerText;
@@ -650,6 +649,7 @@ function initTypos(){
       <button class="btn primary" id="typoRun">Проверить</button>
       <button class="btn" id="btnClear_typoText">Очистить</button>
       <button class="btn" id="btnCopy_typoText">Копировать текст</button>
+      <button class="btn" id="btnPaste_typoText">Вставить текст</button>
     </div>
     <div class="typo-result" id="typoResult"></div>
   `;
@@ -665,6 +665,7 @@ function initTypos(){
 
   const typoTextEl = document.getElementById('typoText');
   setupActions('typoText', 'typoResult');
+  document.getElementById('btnPaste_typoText').onclick = () => pasteFromClipboard('typoText');
   let currentIssues = [];
 
   function renderTypoList() {
@@ -814,6 +815,7 @@ function initSpaces(){
       <button class="btn" id="spaceClear">Очистить лишние</button>
       <button class="btn" id="btnClear_spaceText">Очистить всё</button>
       <button class="btn" id="btnCopy_spaceText">Копировать текст</button>
+      <button class="btn" id="btnPaste_spaceText">Вставить текст</button>
     </div>
     <div class="typo-result" id="spaceResult"></div>
   `;
@@ -821,6 +823,7 @@ function initSpaces(){
   const spaceTextEl = document.getElementById('spaceText');
   const spaceResultEl = document.getElementById('spaceResult');
   setupActions('spaceText', 'spaceResult');
+  document.getElementById('btnPaste_spaceText').onclick = () => pasteFromClipboard('spaceText');
 
   function renderSpaces(text) {
     let count = 0;
@@ -888,12 +891,11 @@ function initSpaces(){
     spaceResultEl.innerHTML = `<div class="res-summary ok">✓ Все лишние пробелы удалены</div>`;
   };
 }
-  /* ============ ГРАММАТИКА (LanguageTool) ============ */
+
+/* ============ ГРАММАТИКА ============ */
 function initGrammar(){
   const panel = document.getElementById('panel-grammar');
-  
-  // Защита на случай, если панель не добавлена в HTML
-  if (!panel) return; 
+  if (!panel) return;
 
   panel.innerHTML = `
     <h3>Грамматика</h3>
@@ -907,12 +909,14 @@ function initGrammar(){
       <button class="btn primary" id="grammarRun">Проверить</button>
       <button class="btn" id="btnClear_grammarText">Очистить</button>
       <button class="btn" id="btnCopy_grammarText">Копировать текст</button>
+      <button class="btn" id="btnPaste_grammarText">Вставить текст</button>
     </div>
     <div class="typo-result" id="grammarResult"></div>
   `;
 
   const grammarTextEl = document.getElementById('grammarText');
   setupActions('grammarText', 'grammarResult');
+  document.getElementById('btnPaste_grammarText').onclick = () => pasteFromClipboard('grammarText');
   let currentIssues = [];
 
   function renderGrammarList() {
@@ -944,8 +948,8 @@ function initGrammar(){
     const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
 
     sortedForList.forEach((i, idx) => {
-      if (i.status !== 'pending') return; 
-      
+      if (i.status !== 'pending') return;
+
       let msgHtml = i.msg ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>` : '';
       let replText = i.repl ? `→ <b style="color:var(--ok)">${esc(i.repl)}</b>` : '(нет варианта замены)';
 
@@ -974,7 +978,6 @@ function initGrammar(){
     pendingSorted.forEach(i => {
       if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
       const badText = text.slice(i.start, i.end) || i.word;
-      // Используем класс hl-grammar (зеленый)
       highlightHtml += `<span class="hl-grammar" title="${esc(i.msg || '')}">${esc(badText)}</span>`;
       lastIndex = i.end;
     });
@@ -990,7 +993,7 @@ function initGrammar(){
         issue.status = 'accepted';
       });
       currentIssues.filter(i => i.status === 'pending' && !i.repl).forEach(i => i.status = 'rejected');
-      
+
       grammarTextEl.innerText = text;
       renderGrammarList();
     };
@@ -1039,7 +1042,7 @@ function initGrammar(){
     const all = [];
     ltData.matches.forEach(m => {
       let repl = (m.replacements && m.replacements.length) ? m.replacements[0].value : '';
-      
+
       let src = 'Грамматика';
       if (m.rule && m.rule.issueType) {
         if (m.rule.issueType === 'typographical') src = 'Типографика';
@@ -1059,7 +1062,7 @@ function initGrammar(){
     });
 
     all.sort((a,b) => b.start - a.start);
-    
+
     const seen = new Set();
     currentIssues = all.filter(i => {
       const key = (i.word || '').toLowerCase() + '|' + (i.repl || '').toLowerCase();
@@ -1070,6 +1073,231 @@ function initGrammar(){
 
     renderGrammarList();
   };
+}
+
+/* ============ КАНЦЕЛЯРИТ ============ */
+let canceloDict = {};
+let canceloStatus = "Загрузка...";
+
+async function loadCanceloDict() {
+  let allData = []; let from = 0; const step = 1000;
+  try {
+    while (true) {
+      const { data, error } = await db.from('cancelo').select('from_phrase, to_phrase, note').range(from, from + step - 1);
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData = allData.concat(data);
+      if (data.length < step) break;
+      from += step;
+    }
+    allData.forEach(item => {
+      if (item.from_phrase && item.to_phrase) {
+        canceloDict[item.from_phrase.toLowerCase().trim()] = item.to_phrase.trim();
+      }
+    });
+    canceloStatus = `Успешно загружено фраз: ${allData.length}`;
+  } catch(err) {
+    canceloStatus = `Ошибка: ${err.message}`;
+  }
+  const listEl = document.getElementById('canceloList');
+  if (listEl) listEl.innerHTML = `<span style="color:${canceloStatus.startsWith('Ошибка') ? 'var(--error)' : 'var(--accent)'}">${esc(canceloStatus)}</span>`;
+}
+
+function initCancelo(){
+  const panel = document.getElementById('panel-cancelo');
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <h3>Канцелярит</h3>
+    <div class="sp-desc">Находит тяжёлые обороты и предлагает замену. Словарь загружается из облака.</div>
+    <div class="editor-box" id="canceloText" contenteditable="true" placeholder="Вставьте текст для проверки…"></div>
+    <div class="action-bar">
+      <button class="btn primary" id="canceloRun">Проверить</button>
+      <button class="btn" id="canceloClearAll">Очистить все канцеляриты</button>
+      <button class="btn" id="btnClear_canceloText">Очистить текст</button>
+      <button class="btn" id="btnCopy_canceloText">Копировать текст</button>
+      <button class="btn" id="btnPaste_canceloText">Вставить текст</button>
+    </div>
+    <div class="typo-result" id="canceloResult"></div>
+    <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+      <div class="sp-desc" style="margin-bottom:8px">Статус словаря:</div>
+      <div class="yo-list" id="canceloList"><span style="color:var(--muted);font-size:13px">${esc(canceloStatus)}</span></div>
+    </div>
+  `;
+
+  const canceloTextEl = document.getElementById('canceloText');
+  setupActions('canceloText', 'canceloResult');
+  document.getElementById('btnPaste_canceloText').onclick = () => pasteFromClipboard('canceloText');
+
+  let currentIssues = [];
+
+  function findCancelo(text) {
+    const issues = [];
+    const lowerText = text.toLowerCase();
+    for (const phrase in canceloDict) {
+      let idx = 0;
+      while ((idx = lowerText.indexOf(phrase, idx)) !== -1) {
+        const before = idx === 0 ? '' : lowerText[idx - 1];
+        const after = lowerText[idx + phrase.length] || '';
+        const isWordBoundary = !/[а-яёa-z]/i.test(before) && !/[а-яёa-z]/i.test(after);
+        if (isWordBoundary) {
+          issues.push({
+            word: text.slice(idx, idx + phrase.length),
+            repl: canceloDict[phrase],
+            start: idx,
+            end: idx + phrase.length,
+            source: 'Канцелярит',
+            status: 'pending'
+          });
+        }
+        idx += phrase.length;
+      }
+    }
+    issues.sort((a,b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+    const result = [];
+    let lastEnd = -1;
+    for (const issue of issues) {
+      if (issue.start >= lastEnd) { result.push(issue); lastEnd = issue.end; }
+    }
+    return result;
+  }
+
+  function renderCanceloList() {
+    const resultEl = document.getElementById('canceloResult');
+    const pendingIssues = currentIssues.filter(i => i.status === 'pending');
+
+    if (pendingIssues.length === 0 && currentIssues.length > 0) {
+      resultEl.innerHTML = `<div class="res-summary ok">✓ Все замечания обработаны!</div>`;
+      canceloTextEl.innerText = canceloTextEl.innerText;
+      return;
+    }
+    if (currentIssues.length === 0) {
+      resultEl.innerHTML = `<div class="res-summary ok">✓ Канцелярита не найдено</div>`;
+      canceloTextEl.innerText = canceloTextEl.innerText;
+      return;
+    }
+
+    let html = `
+      <div class="res-summary err" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>✕ Замечаний: ${pendingIssues.length}</span>
+        <div>
+          <button class="btn small" id="acceptAllCancelo">Принять все</button>
+          <button class="btn small" id="rejectAllCancelo">Отклонить все</button>
+        </div>
+      </div>
+    `;
+
+    const sortedForList = [...currentIssues].sort((a,b) => a.start - b.start);
+
+    sortedForList.forEach((i, idx) => {
+      if (i.status !== 'pending') return;
+      let msgHtml = i.msg ? `<div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(i.msg)}</div>` : '';
+      let replText = i.repl ? `→ <b style="color:var(--ok)">${esc(i.repl)}</b>` : '(нет варианта замены)';
+
+      html += `
+        <div class="issue" style="border-left-color:var(--warn); background:rgba(255,209,102,0.05); animation-delay: ${idx * 0.05}s">
+          <span class="i-rule" style="color:var(--warn)">${esc(i.source)}</span>
+          <span class="i-detail">
+            <b style="color:var(--error)">${esc(i.word)}</b> ${replText}
+            ${msgHtml}
+          </span>
+          <div class="issue-actions">
+            ${i.repl ? `<button class="btn small" style="background:rgba(124,255,178,0.2); color:var(--ok); border-color:rgba(124,255,178,0.4);" onclick="applyCanceloFix(${currentIssues.indexOf(i)})">Принять</button>` : ''}
+            <button class="btn small" style="background:rgba(255,92,138,0.1); color:var(--error); border-color:rgba(255,92,138,0.3);" onclick="rejectCanceloFix(${currentIssues.indexOf(i)})">Отклонить</button>
+          </div>
+        </div>`;
+    });
+
+    resultEl.innerHTML = html;
+
+    let text = canceloTextEl.innerText;
+    let highlightHtml = '';
+    let lastIndex = 0;
+    const pendingSorted = pendingIssues.sort((a,b) => a.start - b.start);
+
+    pendingSorted.forEach(i => {
+      if (i.start > lastIndex) highlightHtml += esc(text.slice(lastIndex, i.start)).replace(/\n/g, '<br>');
+      const badText = text.slice(i.start, i.end) || i.word;
+      highlightHtml += `<span class="hl-grammar" style="background:rgba(255,209,102,0.2); border-bottom-color:var(--warn);" title="${esc(i.repl)}">${esc(badText)}</span>`;
+      lastIndex = i.end;
+    });
+    if (lastIndex < text.length) highlightHtml += esc(text.slice(lastIndex)).replace(/\n/g, '<br>');
+
+    canceloTextEl.innerHTML = highlightHtml;
+
+    document.getElementById('acceptAllCancelo').onclick = () => {
+      let text = canceloTextEl.innerText;
+      const pending = currentIssues.filter(i => i.status === 'pending' && i.repl).sort((a,b) => b.start - a.start);
+      pending.forEach(issue => {
+        text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+        issue.status = 'accepted';
+      });
+      currentIssues.filter(i => i.status === 'pending' && !i.repl).forEach(i => i.status = 'rejected');
+      canceloTextEl.innerText = text;
+      renderCanceloList();
+    };
+
+    document.getElementById('rejectAllCancelo').onclick = () => {
+      currentIssues.forEach(i => { if (i.status === 'pending') i.status = 'rejected'; });
+      renderCanceloList();
+    };
+  }
+
+  window.applyCanceloFix = (idx) => {
+    const issue = currentIssues[idx];
+    if (!issue.repl) return;
+    issue.status = 'accepted';
+    let text = canceloTextEl.innerText;
+    canceloTextEl.innerText = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+    const diff = issue.repl.length - (issue.end - issue.start);
+    currentIssues.forEach(other => {
+      if (other.status === 'pending' && other.start > issue.start) {
+        other.start += diff;
+        other.end += diff;
+      }
+    });
+    renderCanceloList();
+  };
+
+  window.rejectCanceloFix = (idx) => {
+    currentIssues[idx].status = 'rejected';
+    renderCanceloList();
+  };
+
+  document.getElementById('canceloRun').onclick = () => {
+    const t = canceloTextEl.innerText;
+    const resultEl = document.getElementById('canceloResult');
+    if (!t.trim()) { canceloTextEl.innerHTML = ''; resultEl.innerHTML = ''; return; }
+
+    if (Object.keys(canceloDict).length === 0) {
+      resultEl.innerHTML = `<div class="res-summary err">Словарь ещё не загрузился. Подожди пару секунд и попробуй снова.</div>`;
+      return;
+    }
+
+    currentIssues = findCancelo(t);
+    renderCanceloList();
+  };
+
+  document.getElementById('canceloClearAll').onclick = () => {
+    let text = canceloTextEl.innerText;
+    if (!text.trim()) return;
+    const issues = findCancelo(text).sort((a,b) => b.start - a.start);
+    if (issues.length === 0) {
+      document.getElementById('canceloResult').innerHTML = `<div class="res-summary ok">✓ Канцелярита не найдено — очищать нечего</div>`;
+      return;
+    }
+    let count = 0;
+    issues.forEach(issue => {
+      if (!issue.repl || issue.repl.startsWith('(')) return;
+      text = text.slice(0, issue.start) + issue.repl + text.slice(issue.end);
+      count++;
+    });
+    canceloTextEl.innerText = text;
+    currentIssues = [];
+    document.getElementById('canceloResult').innerHTML = `<div class="res-summary ok">✓ Заменено канцеляритов: ${count}</div>`;
+  };
+
+  if (Object.keys(canceloDict).length === 0) loadCanceloDict();
 }
 
 /* ============ СТАРТ ============ */
